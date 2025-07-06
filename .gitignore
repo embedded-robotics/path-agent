@@ -6,3 +6,6 @@ TransPath/*
 ovarian/*
 prostate/*
 install-openslide-noroot/*
+test_images/*
+test_images_padded/*
+test_images_tiles/*
