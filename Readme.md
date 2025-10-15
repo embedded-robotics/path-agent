@@ -1,4 +1,4 @@
-# Path-Agent: Mimicking the Pathologist Decision Making Process
+# Path-AGENT: Mimicking a Clinically Proven Diagnostic Workflow for Open-Ended Pathology Visual Question Answering
 
 1. Aims and Objectives
 
