@@ -22,6 +22,7 @@ dist/
 # Virtual environments
 .venv/
 venv/
+**/.venv/
 
 # VSCode / PyCharm
 .vscode/
@@ -34,9 +35,14 @@ venv/
 .env
 .env.*
 
-tools/llava_med/.venv/
 tools/llava_med/artifacts/
 artifacts/
 data/
 !data/.gitkeep
 logs/
+
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd

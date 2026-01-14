@@ -1,0 +1,18 @@
+# Pinned to match LLaVA‑Med constraints
+transformers==4.36.2
+accelerate==0.21.0
+timm==0.9.12
+einops==0.6.1
+einops-exts==0.0.4
+# tokenizer/stable pieces
+tokenizers>=0.15,<0.16
+sentencepiece==0.1.99
+httpx==0.24.0
+
+# Utils
+pyyaml>=6.0.1,<7
+click>=8.1,<9
+rich>=13.7,<14
+
+# Optional perf/utilities (safe to keep or remove)
+psutil>=5.9,<6

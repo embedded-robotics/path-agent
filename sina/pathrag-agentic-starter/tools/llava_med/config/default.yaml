@@ -1,0 +1,27 @@
+env:
+  cache_dir: "~/.cache/huggingface"
+  cuda_alloc_conf: "max_split_size_mb:128"  # helps fragmentation on 12GB cards
+
+models:
+  # Customize these if you use a different repo/model id
+  vlm_repo: "lamm-mit/llava-med-v1.5"      # placeholder; keep via env MODEL_VLM_REPO
+  medgemma_repo: "google/med-gemma-2b-it"  # fallback VLM if OOM
+
+stage4:
+  k_patches: 3            # default; you can pass K=6 via CLI flag
+  critique_iters: 1       # set to 0 for speed
+  he_nuclei_threshold: 5  # >=5 nuclei -> treat as H&E pathology
+  output_dir: "artifacts"
+  smoke_answers_path: "artifacts/answer/smoke.jsonl"
+  last_run_path: "artifacts/last_run.json"
+  vis:
+    max_size: 1536        # reduce if OOM
+
+re_rank:
+  mode: "lexical"         # "lexical" | "embeddings" (future)
+
+site_label_alias:
+  head-neck: head_neck
+  gyn: gynecologic
+  gi: gastrointestinal
+  hem: hematolymphoid

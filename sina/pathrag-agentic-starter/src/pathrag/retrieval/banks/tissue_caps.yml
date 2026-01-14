@@ -1,0 +1,27 @@
+head_neck:
+  - "Keratin pearls and intercellular bridges are characteristic in squamous lesions."
+  - "Head and neck SCC often shows keratinization and nests."
+breast:
+  - "Ductal structures and desmoplastic stroma may indicate IDC."
+  - "ER/PR/HER2 markers drive subtyping."
+skin:
+  - "Epidermal maturation, keratinization; consider SCC vs BCC."
+# … add 1–2 bullets for each label you care about now
+lung:
+  - "Glandular differentiation suggests adenocarcinoma."
+  - "Keratinization and intercellular bridges suggest SCC."
+gastrointestinal:
+  - "Gland formation and mucin production are key features."
+  - "Signet ring cells may indicate aggressive behavior."
+genitourinary:
+  - "Papillary structures and clear cells are common in renal cell carcinoma."
+  - "Glandular patterns may suggest adenocarcinoma."
+gynecologic:
+  - "Squamous differentiation and keratinization are common in cervical SCC."
+  - "Glandular patterns may indicate adenocarcinoma."
+soft_tissue:
+  - "Spindle cell morphology and myxoid stroma are notable."
+  - "Rhabdomyoblastic differentiation may indicate rhabdomyosarcoma."
+hematolymphoid:
+  - "Diffuse infiltration of atypical lymphocytes is characteristic."
+  - "Hodgkin lymphoma shows Reed-Sternberg cells."
