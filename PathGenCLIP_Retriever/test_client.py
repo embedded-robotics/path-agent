@@ -1,28 +1,59 @@
 import json
 import requests
 
-API_URL = "http://127.0.0.1:8000/match"
+BASE_URL = "http://127.0.0.1:8000"
 
-def main():
+def test_match_query_list():
+    print("\n--- Testing /match_query_list ---")
+    url = f"{BASE_URL}/match_query_list"
+    
     payload = {
-        "image_path": r"brst_lbls.jpg",   # <-- change this
+        "image_path": r"images/brst_lbls.jpg",  # <-- Update with valid path
         "queries": [
-            "Comparison with a normal breast section shows presence of ductal and lobular structures in the fibro-adipose stroma. if we zoom in a little bit we can see some irregular nests of cells within the fibrous stroma. So actually the original ductal and lobular architecture of the breast is lost here. Just for comparison, here is a section taken from a normal breast and again you can see the fibro-adipose stroma and here are the ductal and the lobular structures. So this architecture is not seen in the core biopsy.",
-            "Clusters of cells called lobules are present, which contain ducts and glandular tissue or acini in an active mammary gland. by a vast network of dense, irregular connective tissue. And within it, we can see patches of adipocytes, or adipose tissue. And also, we can see these clusters of cells. And these clusters of cells are important because these are what are called lobules. And within each one of these lobules, we're actually going to find a series of ducts. And in an active mammary gland, we'd see a set of ducts as well as glandular tissue or acini.",
-            "Presence of fissured and cracked amorphous pink material in the dermis associated with red cell extravasation, suggestive of amyloid deposition. Thioflavin-T or congo red stains are better for immunoglobulin derived amyloid. Colloid milium stains weakly for amyloid and has a background of solar elastosis. okay Yeah, that is fissured and cracked. So fissured amorphous pink material and cracked sitting in the dermis associated with red cell extravasation. So amyloid would be absolutely your thought. This was a patient with Waldenstroms and deposition, but amyloid, thioflavin T would be a great stain"
+            "breast tissue",
+            "liver tissue",
+            "colon tissue"
         ],
-        "anatomical_site": "breast",  # <-- change to a valid key in your model_names
+        "anatomical_site": "breast",
         "k": 2
     }
 
-    resp = requests.post(API_URL, json=payload, timeout=300)
-    print("Status:", resp.status_code)
+    try:
+        resp = requests.post(url, json=payload, timeout=300)
+        if resp.status_code == 200:
+            print("Success!")
+            print(json.dumps(resp.json(), indent=2))
+        else:
+            print("Failed:", resp.status_code)
+            print(resp.text)
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def test_retrieve_captions():
+    print("\n--- Testing /retrieve_captions ---")
+    url = f"{BASE_URL}/retrieve_captions"
+    
+    payload = {
+        "images": [
+            r"images/brst_site_image.jpg", # <-- Update with valid path
+            r"images/brst_lbls.jpg"
+        ],
+        "anatomical_site": "breast",
+        "k": 3
+    }
 
     try:
-        data = resp.json()
-        print(json.dumps(data, indent=2))
-    except Exception:
-        print(resp.text)
+        resp = requests.post(url, json=payload, timeout=300)
+        if resp.status_code == 200:
+            print("Success!")
+            print(json.dumps(resp.json(), indent=2))
+        else:
+            print("Failed:", resp.status_code)
+            print(resp.text)
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main()
+    test_match_query_list()
+    test_retrieve_captions()

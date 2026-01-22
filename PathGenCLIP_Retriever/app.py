@@ -1,15 +1,23 @@
 import gc
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Any, Optional
 
 import torch
+import open_clip
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from PIL import Image
-import open_clip
+import uvicorn
 
-app = FastAPI(title="Anatomical-Site CLIP Matcher", version="1.0")
-# to run:  python -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload
+# Qdrant Imports
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+app = FastAPI(title="Anatomical-Site CLIP Matcher & Search", version="2.4")
+
+# ---------------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------------
 
 # anatomical_site -> checkpoint path/name
 model_names: Dict[str, str] = {
@@ -31,39 +39,55 @@ model_names: Dict[str, str] = {
     "stomach": "pathgenclip_models/pathgenclip_best_stomach.pt",
     "testis": "pathgenclip_models/pathgenclip_best_testis.pt",
     "thyroid": "pathgenclip_models/pathgenclip_best_thyroid.pt",
-    "uterus": "pathgenclip_models/pathgenclip_best_uterus.pt" }
-
+    "uterus": "pathgenclip_models/pathgenclip_best_uterus.pt" 
+}
 
 DEFAULT_MODEL_ARCH = "ViT-B-16"
 ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
+DB_PATH = "./qdrant_db"
+COLLECTION_NAME = "clip_captions"
 
+# ---------------------------------------------------------
+# GLOBAL RESOURCES
+# ---------------------------------------------------------
 
-class MatchRequest(BaseModel):
+# Initialize Qdrant Client GLOBALLY (runs once at startup)
+print(f"Initializing Qdrant Client at {DB_PATH}...")
+qdrant_client = QdrantClient(path=DB_PATH)
+print("Qdrant Client ready.")
+
+# ---------------------------------------------------------
+# PYDANTIC MODELS
+# ---------------------------------------------------------
+
+class MatchQueryListRequest(BaseModel):
     image_path: str = Field(..., description="Local path to the image file")
     queries: List[str] = Field(..., min_length=1)
     anatomical_site: str
     k: int = Field(5, ge=1)
 
+class RetrieveCaptionsRequest(BaseModel):
+    images: List[str] = Field(..., description="List of local image paths")
+    anatomical_site: str
+    k: int = Field(5, ge=1)
+
+# ---------------------------------------------------------
+# HELPER FUNCTIONS
+# ---------------------------------------------------------
 
 def get_device() -> torch.device:
     return torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-
-@torch.inference_mode()
-def run_clip_from_path(
-    image_path: str,
-    queries: List[str],
-    anatomical_site: str,
-) -> List[Tuple[str, float]]:
+def validate_site(anatomical_site: str):
     if anatomical_site not in model_names:
         raise HTTPException(
             status_code=400,
             detail=f"Unknown anatomical_site '{anatomical_site}'. Available: {sorted(model_names.keys())}",
         )
 
+def validate_image_path(image_path: str):
     if not os.path.exists(image_path) or not os.path.isfile(image_path):
         raise HTTPException(status_code=400, detail=f"image_path not found: {image_path}")
-
     ext = os.path.splitext(image_path)[1].lower()
     if ext and ext not in ALLOWED_EXTS:
         raise HTTPException(
@@ -71,26 +95,85 @@ def run_clip_from_path(
             detail=f"Unsupported image extension '{ext}'. Allowed: {sorted(ALLOWED_EXTS)}",
         )
 
-    if not queries or any(not str(q).strip() for q in queries):
-        raise HTTPException(status_code=400, detail="queries must be a non-empty list of non-empty strings")
+def search_single_image_logic(
+    client: QdrantClient, 
+    model: Any, 
+    preprocess: Any, 
+    device: torch.device, 
+    image_path: str, 
+    category: str, 
+    top_k: int
+) -> List[Dict[str, Any]]:
+    """
+    Internal logic to embed image and query Qdrant.
+    """
+    try:
+        # Preprocess and resize
+        img = Image.open(image_path).convert("RGB")
+        img = img.resize((512, 512)) 
+        
+        image_tensor = preprocess(img).unsqueeze(0).to(device)
 
-    ckpt = model_names[anatomical_site]
+        # Encode
+        if device.type == "cuda":
+            with torch.cuda.amp.autocast():
+                image_embed = model.encode_image(image_tensor)
+        else:
+            image_embed = model.encode_image(image_tensor)
+
+        image_embed /= image_embed.norm(dim=-1, keepdim=True)
+        query_vector = image_embed[0].cpu().tolist()
+
+        # Query Qdrant
+        query_response = client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=query_vector,
+            query_filter=Filter(
+                must=[FieldCondition(key="folder", match=MatchValue(value=category))]
+            ),
+            limit=top_k,
+            with_payload=True
+        )
+
+        # Parse results
+        results = []
+        for point in query_response.points:
+            results.append({
+                "score": point.score,
+                "caption": point.payload.get("caption"),
+                "image_path": point.payload.get("filepath"),
+                "category": point.payload.get("folder")
+            })
+        return results
+
+    except Exception as e:
+        return [{"error": f"Failed to process image: {str(e)}"}]
+
+# ---------------------------------------------------------
+# API ENDPOINTS
+# ---------------------------------------------------------
+
+@app.post("/match_query_list")
+def match_query_list(req: MatchQueryListRequest):
+    validate_site(req.anatomical_site)
+    validate_image_path(req.image_path)
+
+    ckpt = model_names[req.anatomical_site]
     device = get_device()
-
-    # Load model fresh every request (no caching)
-    model, _, preprocess = open_clip.create_model_and_transforms(
-        DEFAULT_MODEL_ARCH,
-        pretrained=ckpt,
-    )
-    model.eval().to(device)
-    tokenizer = open_clip.get_tokenizer(DEFAULT_MODEL_ARCH)
+    model = None
 
     try:
-        img = Image.open(image_path).convert("RGB")
-        image_tensor = preprocess(img).unsqueeze(0).to(device)  # [1,3,H,W]
-        text_tokens = tokenizer(queries).to(device)              # [N, ctx_len]
+        # Load Model
+        model, _, preprocess = open_clip.create_model_and_transforms(
+            DEFAULT_MODEL_ARCH, pretrained=ckpt
+        )
+        model.eval().to(device)
+        tokenizer = open_clip.get_tokenizer(DEFAULT_MODEL_ARCH)
 
-        # Autocast only on CUDA
+        img = Image.open(req.image_path).convert("RGB")
+        image_tensor = preprocess(img).unsqueeze(0).to(device)
+        text_tokens = tokenizer(req.queries).to(device)
+
         if device.type == "cuda":
             with torch.cuda.amp.autocast():
                 img_feat = model.encode_image(image_tensor)
@@ -99,32 +182,74 @@ def run_clip_from_path(
             img_feat = model.encode_image(image_tensor)
             txt_feat = model.encode_text(text_tokens)
 
-        img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
-        txt_feat = txt_feat / txt_feat.norm(dim=-1, keepdim=True)
+        img_feat /= img_feat.norm(dim=-1, keepdim=True)
+        txt_feat /= txt_feat.norm(dim=-1, keepdim=True)
 
-        sims = (img_feat @ txt_feat.T).squeeze(0)           # [N]
-        probs = torch.softmax(100.0 * sims, dim=-1)         # [N]
+        sims = (img_feat @ txt_feat.T).squeeze(0)
+        probs = torch.softmax(100.0 * sims, dim=-1)
+        
+        scored = list(zip(req.queries, probs.detach().float().cpu().tolist()))
+        scored.sort(key=lambda x: x[1], reverse=True)
+        k_eff = min(req.k, len(scored))
 
-        probs_list = probs.detach().float().cpu().tolist()  # python floats
-        return list(zip(queries, [float(p) for p in probs_list]))
+        return {
+            "image_path": req.image_path,
+            "anatomical_site": req.anatomical_site,
+            "results": scored[:k_eff],
+        }
 
     finally:
-        # Release memory after request
-        del model
+        # Cleanup Model
+        if model is not None:
+            del model
         gc.collect()
         if device.type == "cuda":
             torch.cuda.empty_cache()
 
 
-@app.post("/match")
-def match(req: MatchRequest):
-    scored = run_clip_from_path(req.image_path, req.queries, req.anatomical_site)
-    scored.sort(key=lambda x: x[1], reverse=True)
+@app.post("/retrieve_captions", response_model=List[List[Dict[str, Any]]])
+def retrieve_captions(req: RetrieveCaptionsRequest):
+    """
+    Returns a simple list of lists.
+    Outer list: corresponds to input images.
+    Inner list: contains the retrieved results for that image.
+    """
+    validate_site(req.anatomical_site)
+    for path in req.images:
+        validate_image_path(path)
 
-    k_eff = min(req.k, len(scored))
-    return {
-        "image_path": req.image_path,
-        "anatomical_site": req.anatomical_site,
-        "k": k_eff,
-        "results": scored[:k_eff],  # list of (query, probability)
-    }
+    ckpt = model_names[req.anatomical_site]
+    device = get_device()
+    model = None
+
+    try:
+        # 1. Load Model
+        model, _, preprocess = open_clip.create_model_and_transforms(
+            DEFAULT_MODEL_ARCH, pretrained=ckpt
+        )
+        model.eval().to(device)
+
+        batch_results = []
+        
+        # 2. Process Images using global client
+        for img_path in req.images:
+            results = search_single_image_logic(
+                qdrant_client, model, preprocess, device, 
+                img_path, req.anatomical_site, req.k
+            )
+            # Just append the results list directly
+            batch_results.append(results)
+        
+        return batch_results
+
+    finally:
+        # 3. Cleanup ONLY the model
+        if model is not None:
+            del model
+            
+        gc.collect()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)
