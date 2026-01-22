@@ -11,7 +11,8 @@ open_clip_torch==3.2.0
 pandas==2.3.2
 qdrant-client==1.16.2
 transformers==4.55.4
+fastapi==0.128.0
+uvicorn==0.40.0
 --extra-index-url https://download.pytorch.org/whl/nightly/cu128
 torch>=2.10.0.dev
 torchvision>=0.25.0.dev
-
