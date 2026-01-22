@@ -14,6 +14,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+PathGenCLIP_Retriever/pathgenclip_models/
+PathGenCLIP_Retriever/qdrant_db/
+
 # Distribution / packaging
 build/
 dist/
