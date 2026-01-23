@@ -35,19 +35,22 @@ class LlavaMedClient:
                 )
 
     def _run(self, question_file: str, image_folder: str, answers_file: str):
-        """
-        Call the official LLaVA-Med CLI (llava.eval.model_vqa) inside the repo.
-        Only used when USE_LLAVA=1.
-        """
+        # 🔹 Make ALL paths absolute, based on the current (PathRAG) working dir
+        qfile = str(pathlib.Path(question_file).resolve())
+        img_folder = str(pathlib.Path(image_folder).resolve())
+        afile = str(pathlib.Path(answers_file).resolve())
+
         cmd = [
-            "python",
-            "-m", "llava.eval.model_vqa",
+            "python", "-m", "llava.eval.model_vqa",
             "--model-path", self.model,
-            "--question-file", question_file,
-            "--image-folder", image_folder,
-            "--answers-file", answers_file,
+            "--question-file", qfile,
+            "--image-folder", img_folder,
+            "--answers-file", afile,
         ]
+
+        # Run from inside the LLaVA-Med repo so `llava.*` imports work
         subprocess.run(cmd, check=True, cwd=str(self.repo))
+
 
     def ask_batch(self, question_jsonl: str, image_folder: str, out_jsonl: str) -> List[str]:
         """
