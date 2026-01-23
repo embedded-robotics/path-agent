@@ -261,7 +261,14 @@ def _rows_for_patches(patch_image_paths, prompt):
     # LLaVA expects: {"image": "<file>", "text": "<prompt>", "question_id": i}
     rows = []
     for i, img in enumerate(patch_image_paths):
-        rows.append({"image": img, "text": prompt, "question_id": i})
+        abs_img = str(Path(img).resolve())   # <-- make image path absolute
+        rows.append(
+            {
+                "image": abs_img,
+                "text": prompt,
+                "question_id": i,
+            }
+        )
     return rows
 
 def roi_agent_describe(patch, question: str):
@@ -269,38 +276,49 @@ def roi_agent_describe(patch, question: str):
     REAL VLM call (LLaVA-Med): single-patch ROI description.
     Requires:
       - PATHRAG_IMAGE: path to the full image (or defaults to sample_he.png)
-      - LLMED_REPO, LLMED_MODEL: see client
+      - LLMED_REPO, LLMED_MODEL: see LlavaMedClient
     """
     img_path = os.environ.get("PATHRAG_IMAGE", "sample_he.png")
     crop_paths = save_crops(img_path, [patch.bbox], "artifacts/crops")
-    prompt = f"Briefly describe this pathology ROI to help answer: {question}. One sentence."
-    qfile = "artifacts/query/roi.jsonl"
-    afile = "artifacts/answer/roi.jsonl"
-    _write_jsonl(_rows_for_patches(crop_paths, prompt), qfile)
+
+    prompt = (
+        f"Briefly describe this pathology ROI to help answer: {question}. "
+        "One sentence."
+    )
+
+    qfile = Path("artifacts/query/roi.jsonl").resolve()
+    afile = Path("artifacts/answer/roi.jsonl").resolve()
+    _write_jsonl(_rows_for_patches(crop_paths, prompt), str(qfile))
 
     try:
         client = LlavaMedClient()
-        texts = client.ask_batch(qfile, ".", afile)
+        texts = client.ask_batch(str(qfile), ".", str(afile))
         text = texts[0] if texts else f"[roi-fallback] {patch.id}"
         return {"useful": True, "description": text}
     except Exception as e:
-        return {"useful": True, "description": f"[roi-error] {e}"}
+        return {"useful": False, "description": f"[roi-error] {e}"}
 
-def patch_agent_contribution(patch, question: str, full_captions: list[str]):
+def patch_agent_contribution(patch: Patch, question: str, full_captions: list[str]) -> str:
     """
     REAL VLM call (LLaVA-Med): explain contribution of this ROI to the answer.
+    Returns a short sentence, used in Stage 5/7 fusion.
     """
     img_path = os.environ.get("PATHRAG_IMAGE", "sample_he.png")
     crop_paths = save_crops(img_path, [patch.bbox], "artifacts/crops")
+
     cap = full_captions[0] if full_captions else "general pathology context"
-    prompt = f"In ONE sentence, explain how this ROI helps answer: '{question}'. Use this context: {cap}"
-    qfile = "artifacts/query/patch.jsonl"
-    afile = "artifacts/answer/patch.jsonl"
-    _write_jsonl(_rows_for_patches(crop_paths, prompt), qfile)
+    prompt = (
+        f"In ONE sentence, explain how this ROI helps answer: '{question}'. "
+        f"Use this context: {cap}"
+    )
+
+    qfile = Path("artifacts/query/patch.jsonl").resolve()
+    afile = Path("artifacts/answer/patch.jsonl").resolve()
+    _write_jsonl(_rows_for_patches(crop_paths, prompt), str(qfile))
 
     try:
         client = LlavaMedClient()
-        texts = client.ask_batch(qfile, ".", afile)
+        texts = client.ask_batch(str(qfile), ".", str(afile))
         return texts[0] if texts else f"[patch-fallback] {patch.id} via {cap}"
     except Exception as e:
         return f"[patch-error] {e}"
