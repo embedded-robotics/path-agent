@@ -28,6 +28,9 @@ from pathlib import Path
 from pathrag.vision.crop import save_crops
 from pathrag.vlm.llava_med_client import LlavaMedClient
 
+from openai import OpenAI
+client = OpenAI()
+
 load_dotenv()
 logger = get_logger("pathrag.tools")
 
@@ -302,21 +305,6 @@ def patch_agent_contribution(patch, question: str, full_captions: list[str]):
     except Exception as e:
         return f"[patch-error] {e}"
 
-# def patch_agent_contribution(patch: Patch, question: str, full_captions: list[str]) -> str:
-    """Explain how this patch contributes to answering the question.
-
-    Provide one focused sentence (ideal for later fusion).
-    You can include a brief reference to the most relevant caption.
-
-    Returns:
-        A short string (<= 1–2 lines).
-    """
-    # TODO (real impl):
-    #   crop = load_crop(patch.bbox)
-    #   return vlm_or_llm_contribution(crop, question, full_captions)
-    cap = full_captions[0] if full_captions else "domain context"
-    return f"{patch.id} supports the answer via {cap}."
-
 # =====================================
 # STAGE 6: QUESTION-AWARE RE-RANK TOPK
 # =====================================
@@ -325,19 +313,76 @@ def rerank_for_question(
     summaries: list[str],
     question: str,
     k: int,
+    min_keep: int = 1,
+    score_drop_ratio: float = 0.7,
 ) -> list[int]:
-    """Return indices (into `patches`) for the Top-K most relevant summaries.
+    """Return indices (into `patches`) for the most relevant summaries.
 
-    Replace this mock with:
-      - Embedding similarity (question vs summary), or
-      - A cross-encoder scoring model.
+    Stage 6: question-aware re-ranking with *dynamic* Top-K.
 
-    NOTE: Return INDICES (ints), not Patch objects, to avoid state duplication.
+    - Uses Stage-5 tags (CENTRAL/SUPPORTING/OFF_TOPIC/CONTRADICTORY) in the summaries.
+    - Scores each summary against the question with a tiny lexical overlap.
+    - Boosts CENTRAL/SUPPORTING, penalizes OFF_TOPIC/CONTRADICTORY.
+    - Keeps all patches whose score is “close enough” to the best score, up to k.
+    - Guarantees that at least `min_keep` patches are returned (if any exist).
     """
-    # TODO (real impl):
-    #   scores = cross_encoder(question, summaries)
-    #   idx = sorted(range(len(summaries)), key=lambda i: scores[i], reverse=True)[:k]
-    return list(range(min(k, len(patches))))
+    n = min(len(patches), len(summaries))
+    if n == 0:
+        return []
+
+    # If caller passed 0 or negative k, treat it as “no explicit cap”.
+    if k <= 0:
+        k = n
+
+    scored: list[tuple[int, float]] = []
+    for i in range(n):
+        text = summaries[i] or ""
+
+        # Base lexical relevance (Stage-5 helper)
+        s = _simple_overlap_score(question, text)
+
+        # Boost/penalize based on Stage-5 role tags in the summary header.
+        upper = text.upper()
+        if "[CENTRAL]" in upper:
+            s *= 1.3
+        elif "[SUPPORTING]" in upper:
+            s *= 1.1
+        elif "[CONTRADICTORY]" in upper:
+            s *= 0.3
+        elif "[OFF_TOPIC]" in upper:
+            s *= 0.4
+
+        scored.append((i, s))
+
+    # Sort patches by score (desc)
+    scored.sort(key=lambda t: t[1], reverse=True)
+    best_score = scored[0][1]
+
+    # If everything scores 0, just return first k indices.
+    if best_score <= 0:
+        return [idx for idx, _ in scored[: min(k, n)]]
+
+    selected: list[int] = []
+
+    for idx, s in scored:
+        # Once we’ve kept at least min_keep, enforce the drop threshold.
+        if s < best_score * score_drop_ratio and len(selected) >= min_keep:
+            break
+        selected.append(idx)
+        if len(selected) >= k:
+            break
+
+    # Enforce min_keep: pad with next best patches if needed.
+    if len(selected) < min_keep:
+        for idx, _ in scored:
+            if idx not in selected:
+                selected.append(idx)
+            if len(selected) >= min_keep or len(selected) >= k:
+                break
+
+    # Final safety: clamp to valid range.
+    selected = [i for i in selected if 0 <= i < n]
+    return selected
 
 
 # ==========================
@@ -424,18 +469,21 @@ Patches:
     return prompt.strip()
 
 
-def _call_gemmamed_for_critique(prompt: str) -> str:
+def _call_gemmamed_for_critique(prompt: str, temperature: float = 0.2) -> str:
     """
-    Hook this into your actual GemmaMed model.
-
-    Examples:
-      - HF Inference API
-      - vLLM server
-      - Local medgemma_run.py with a different mode
-
-    For now, it's a stub you need to implement.
+    Call GemmaMed (or any chat model you've configured as 'gemma-med')
+    with a single prompt string and return the raw text response.
     """
-    raise NotImplementedError("Wire this to your GemmaMed deployment for Stage 5.")
+    messages = [
+        {"role": "system", "content": "You are GemmaMed, a careful pathology VQA assistant."},
+        {"role": "user", "content": prompt},
+    ]
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",  # or your exact model name
+        messages=messages,
+        temperature=temperature,
+    )
+    return response.choices[0].message.content
 
 
 def critique_round(
@@ -462,7 +510,7 @@ def critique_round(
     if not patch_summaries:
         return []
 
-    # Try GemmaMed first
+    # ---- Try GemmaMed first ----
     try:
         prompt = _build_gemmamed_critique_prompt(
             question=question,
@@ -473,7 +521,7 @@ def critique_round(
         raw = _call_gemmamed_for_critique(prompt)
         lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
 
-        refined = list(patch_summaries)  # default to originals
+        refined = list(patch_summaries)  # default: originals
         pattern = re.compile(r"\[PATCH=(\d+)\]\s*\[(\w+)\]\s*(.*)")
 
         for ln in lines:
@@ -491,7 +539,7 @@ def critique_round(
     except Exception as e:
         logger.warning(f"GemmaMed critique failed, falling back to heuristic: {e}")
 
-    # ---------- Fallback: old heuristic behavior ----------
+    # ---- Fallback: old heuristic behavior ----
     refined: List[str] = []
 
     n = min(len(patch_summaries), len(roi_desc)) if roi_desc else len(patch_summaries)
@@ -516,6 +564,7 @@ def critique_round(
         refined_text = f"{header} {merged_context}"
         refined.append(refined_text)
 
+    # if roi_desc shorter than patch_summaries, append untouched tails
     for j in range(n, len(patch_summaries)):
         refined.append(patch_summaries[j])
 
@@ -561,17 +610,97 @@ def _llm_critique_single(
 # ============================
 # STAGE 7: FINAL FUSION (LLM)
 # ============================
+# ============================
+# STAGE 7: FINAL FUSION (LLM)
+# ============================
 def fuse_answer(
     question: str,
     label: str,
     chosen: list[tuple[Patch, str]],
-    mode: str = "answer",     # "answer" | "description"
+    mode: str = "answer",  # "answer" | "description"
 ) -> str:
-    # Extract short inputs for the text LLM: label + per-patch summaries
-    captions = [f"{label}: {s}" for _, s in chosen]
+    """
+    Stage 7 fusion helper (GPT-4+ pathologist).
+
+    Inputs:
+      - question: original user question.
+      - label: sub-pathology label (e.g., "scc").
+      - chosen: list of (Patch, summary) after Stage 6 selection.
+      - mode: "answer" (VQA-style final answer) or "description" (findings-style text).
+
+    Behavior:
+      - Builds a textual evidence block from critiqued patch summaries.
+      - Calls GPT-4-class model for final reasoning over this evidence.
+      - If GPT call fails, falls back to a debug string with raw evidence.
+    """
+    if not chosen:
+        # No patches survived Stage 6 – be explicit instead of hallucinating.
+        return (
+            f"[no-evidence] Could not select any informative patches for label "
+            f"'{label}' to answer: {question}"
+        )
+
+    # Build an evidence block: one line per chosen patch.
+    # Summaries already contain Stage-5 tags like [CENTRAL]/[SUPPORTING]/[OFF_TOPIC].
+    evidence_lines = []
+    for patch, summary in chosen:
+        evidence_lines.append(f"[PATCH_ID={patch.id}] {summary}")
+    evidence_block = "\n".join(evidence_lines)
+
+    # Adjust the “task” based on Path-RAG's (answer) vs (description) variants.
+    if mode == "description":
+        # Path-RAG (description): GPT-4 gets descriptions and produces a richer narrative
+        task = (
+            f"Provide a concise but informative pathology description for this case "
+            f"of '{label}', using only the evidence from the selected patches."
+        )
+    else:
+        # Path-RAG (answer): GPT-4 produces a direct answer to the VQA question.
+        task = (
+            "Answer the pathology question using only the evidence from the selected "
+            "patches. If the evidence is insufficient, say that explicitly."
+        )
+
+    # Construct the user prompt for GPT-4(+)
+    prompt = f"""
+You are a professional pathologist.
+
+Task:
+{task}
+
+Question:
+{question}
+
+Sub-pathology label:
+{label}
+
+Evidence from selected patches:
+{evidence_block}
+
+Instructions:
+- Base your reasoning strictly on the evidence and label above.
+- Do NOT invent findings that are not supported by the patches.
+- If evidence is conflicting or incomplete, acknowledge that.
+- Respond in clear, clinical language in one or two paragraphs.
+""".strip()
+
     try:
-        return _run_medgemma(question, captions)
+        # Call a GPT-4-class model (pick whatever you are using: gpt-4o, gpt-4.1, etc.)
+        response = client.chat.completions.create(
+            model="gpt-4o",  # <--- change this to your preferred GPT model
+            messages=[
+                {"role": "system", "content": "You are a careful medical AI assistant and expert pathologist."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        # fallback to the existing mock if MedGemma tool isn’t available
-        bullets = "\n".join([f"- {p.id} → {s}" for p, s in chosen])
-        return f"[mock {mode}] Q: {question}\nlabel={label}\n{bullets}\n{e}"
+        # Fallback: at least expose the evidence so you can debug
+        debug_block = "\n".join([f"- {p.id} → {s}" for p, s in chosen])
+        return (
+            f"[fusion-fallback {mode}] Q: {question}\n"
+            f"label={label}\n"
+            f"{debug_block}\n"
+            f"Error calling GPT model: {e}"
+        )

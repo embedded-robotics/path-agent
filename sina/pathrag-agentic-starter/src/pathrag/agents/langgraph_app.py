@@ -23,11 +23,12 @@ Keep node signatures and state keys stable. Replace internals of the tool functi
 
 from __future__ import annotations
 
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict, Optional, List, Dict, Any
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 # at top with others
-from pathrag.agents.nodes.stage4_llava_reader import stage4_llava_reader
+# from pathrag.agents.nodes.stage4_llava_reader import stage4_llava_reader
+from dataclasses import dataclass, field
 
 
 # Domain tools (stage implementations; currently mocked in tools.py)
@@ -57,6 +58,26 @@ except Exception:  # pragma: no cover
     logger = _Null()
 
 
+@dataclass
+class PatchSummary:
+    patch_id: int
+    summary: str              # LLaVA-Med patch answer/description (from Stage-4)
+    roi_desc: Optional[str]   # ROI agent description (if you have it)
+    meta: Dict[str, Any] = field(default_factory=dict)  # coords, scores, etc.
+
+
+@dataclass
+class CritiquedPatch:
+    patch_id: int
+    original_summary: str
+    roi_desc: Optional[str]
+    refined_summary: str
+    critique_notes: List[str]          # list of critique comments across rounds
+    relevance_score: float             # 0-1
+    consistency_score: float           # 0-1
+    combined_score: float              # 0-1
+    meta: Dict[str, Any] = field(default_factory=dict)
+
 # ======================
 # State schema (contract)
 # ======================
@@ -83,6 +104,11 @@ class PathRAGState(TypedDict):
     roi_useful: List[bool]
     roi_desc: List[str]
     patch_summaries: List[str]
+
+    # --- Stage 5 artifacts
+    critiqued_patches: List[CritiquedPatch] = field(default_factory=list)
+    ranked_patch_ids: List[int] = field(default_factory=list)
+    dynamic_k: int = 0
 
     # Stage 6 artifacts
     chosen_idx: List[int]             # indices into `patches` for final K
@@ -206,22 +232,13 @@ def route_more_critiques(state: PathRAGState) -> str:
 
 # ---- Stage 6: question-aware Top-K selection ----
 def n_rerank_and_choose(state: PathRAGState) -> PathRAGState:
-    """
-    Stage 6: re-rank summaries against the question and choose Top-K indices.
-
-    Pre:
-      - patches, patch_summaries aligned
-      - top_k set
-
-    Post:
-      - chosen_idx: list[int] (indices into `patches`)
-    """
     logger.info("Stage 6 start")
     patches = [Patch(**p) for p in state["patches"]]
     idx = rerank_for_question(
         patches, state["patch_summaries"], state["question"], k=state["top_k"]
     )
     state["chosen_idx"] = idx
+    state["dynamic_k"] = len(idx)   # <- optional, but matches “dynamic K” design
     logger.info(f"Stage 6 done: chosen_idx={idx}")
     return state
 
@@ -266,7 +283,7 @@ def build_graph():
     # Register nodes
     g.add_node("tile_rank", n_tile_and_rank)           # Stages 1–2
     g.add_node("identify", n_identify_and_retrieve)    # Stage 3
-    g.add_node("stage4", stage4_llava_reader)  # stage3 -> stage4 -> stage5
+    g.add_node("stage4", n_roi_and_patch_agents)  # stage3 -> stage4 -> stage5
     g.add_node("critique", n_critique_round)           # Stage 5 (loop)
     g.add_node("rerank", n_rerank_and_choose)          # Stage 6
     g.add_node("fuse", n_fuse)                         # Stage 7
@@ -289,3 +306,6 @@ def build_graph():
 
     # Checkpointer enables stream/replay (requires a thread_id at runtime)
     return g.compile(checkpointer=MemorySaver())
+
+app = build_graph()
+# Expose app for runner
