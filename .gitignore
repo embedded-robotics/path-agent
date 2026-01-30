@@ -16,6 +16,7 @@ __pycache__/
 
 PathGenCLIP_Retriever/pathgenclip_models/
 PathGenCLIP_Retriever/qdrant_db/
+CHIEF_HeatMap_API/model_weight/
 
 # Distribution / packaging
 build/
