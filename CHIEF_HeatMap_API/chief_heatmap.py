@@ -22,7 +22,7 @@ def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chie
     Args:
         svs_path: Path to the slide file (.svs, .tiff, etc.)
         slide_level: Pyramid level to process (0 = highest resolution)
-        valid_bounds: List of (x1, y1, x2, y2) tuples defining valid regions
+        valid_bounds: List of (x1, y1, x2, y2) tuples defining valid regions AT THE SPECIFIED SLIDE_LEVEL
         k: Number of top patches to return
         backbone: Pretrained feature extraction model
         chief: CHIEF model for patch probability prediction
@@ -32,7 +32,7 @@ def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chie
     
     Returns:
         tuple: (top_k_patches, heatmap)
-            - top_k_patches: List of (row, col) tuples
+            - top_k_patches: List of (x, y) tuples AT THE SPECIFIED SLIDE_LEVEL
             - heatmap: 2D numpy array of patch probabilities
     """
     # Initialize transforms
@@ -46,15 +46,22 @@ def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chie
     # Load WSI using OpenSlide
     slide = openslide.OpenSlide(svs_path)
     img_w, img_h = slide.level_dimensions[slide_level]
-    print(f"Processing slide at level {slide_level}: {img_w}x{img_h}")
+    downsample = slide.level_downsamples[slide_level]
+    print(f"Processing slide at level {slide_level}: {img_w}x{img_h}, downsample: {downsample}")
     
     # Generate heatmap
+    # Note: We scan in level-specific pixel space but convert to level 0 for read_region
     heatmap = []
     with torch.no_grad():
-        for top in tqdm(range(0, img_h, patch_size), desc="Processing rows"):
+        for row_idx, top_level in enumerate(tqdm(range(0, img_h, patch_size), desc="Processing rows")):
             row_probs = []
-            for left in range(0, img_w, patch_size):
-                patch = slide.read_region((left, top), slide_level, (patch_size, patch_size)).convert("RGB")
+            for col_idx, left_level in enumerate(range(0, img_w, patch_size)):
+                # Convert level-specific coordinates to level 0 for OpenSlide
+                left_level0 = int(left_level * downsample)
+                top_level0 = int(top_level * downsample)
+                
+                # Read patch from slide (location in level 0, read at slide_level)
+                patch = slide.read_region((left_level0, top_level0), slide_level, (patch_size, patch_size)).convert("RGB")
                 
                 if patch.size != (patch_size, patch_size):
                     row_probs.append(0.0)
@@ -71,8 +78,12 @@ def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chie
     slide.close()
     heatmap = np.array(heatmap)
     
-    # Get top K patches within valid bounds
-    top_k_patches = _get_top_k_patches_with_bounds(heatmap, k, valid_bounds, patch_size)
+    # Get top K patches within valid bounds (valid_bounds are at slide_level)
+    top_k_patches_indices = _get_top_k_patches_with_bounds(heatmap, k, valid_bounds, patch_size)
+    
+    # Convert to slide_level pixel coordinates
+    top_k_patches = [(int(col * patch_size), int(row * patch_size)) 
+                     for row, col in top_k_patches_indices]
     
     return top_k_patches, heatmap
 
@@ -85,7 +96,7 @@ def _get_top_k_patches_with_bounds(heatmap, k, valid_bounds, patch_size=224):
     Args:
         heatmap: 2D numpy array of patch probabilities
         k: Number of top patches to return
-        valid_bounds: List of (x1, y1, x2, y2) tuples defining valid regions
+        valid_bounds: List of (x1, y1, x2, y2) tuples defining valid regions at slide_level
         patch_size: Size of each patch in pixels (default: 224)
     
     Returns:
@@ -96,13 +107,13 @@ def _get_top_k_patches_with_bounds(heatmap, k, valid_bounds, patch_size=224):
     
     for row in range(heatmap.shape[0]):
         for col in range(heatmap.shape[1]):
-            # Convert (row, col) to pixel coordinates
-            x = col * patch_size
-            y = row * patch_size
-            x2 = x + patch_size
-            y2 = y + patch_size
+            # Convert (row, col) to slide_level pixel coordinates
+            x = int(col * patch_size)
+            y = int(row * patch_size)
+            x2 = int(x + patch_size)
+            y2 = int(y + patch_size)
             
-            # Check if patch is inside any valid bound
+            # Check if patch is inside any valid bound (valid_bounds are at slide_level)
             for bound_x1, bound_y1, bound_x2, bound_y2 in valid_bounds:
                 if x >= bound_x1 and y >= bound_y1 and x2 <= bound_x2 and y2 <= bound_y2:
                     valid_mask[row, col] = True
@@ -121,13 +132,14 @@ def _get_top_k_patches_with_bounds(heatmap, k, valid_bounds, patch_size=224):
 
 
 
-def visualize_heatmap(heatmap, top_k_patches=None, output_path="patch_probability_heatmap.png"):
+def visualize_heatmap(heatmap, top_k_patches=None, patch_size=224, output_path="patch_probability_heatmap.png"):
     """
     Visualize the patch probability heatmap.
     
     Args:
         heatmap: 2D numpy array of patch probabilities
-        top_k_patches: Optional list of (row, col) tuples to mark on the heatmap
+        top_k_patches: Optional list of (x, y) pixel coordinate tuples at slide_level
+        patch_size: Size of each patch in pixels (default: 224)
         output_path: Path to save the visualization
     """
     plt.figure(figsize=(8, 6))
@@ -135,7 +147,10 @@ def visualize_heatmap(heatmap, top_k_patches=None, output_path="patch_probabilit
     
     if top_k_patches is not None:
         plt.title(f"Patch-Level Probability Heatmap with Top {len(top_k_patches)} Patches")
-        for row, col in top_k_patches:
+        for x_level, y_level in top_k_patches:
+            # Convert slide_level coordinates to row/col indices for heatmap visualization
+            col = int(x_level / patch_size)
+            row = int(y_level / patch_size)
             rect = plt.Rectangle((col - 0.5, row - 0.5), 1, 1, 
                                  fill=False, edgecolor='green', linewidth=2)
             plt.gca().add_patch(rect)
@@ -156,7 +171,7 @@ def save_annotated_slide(svs_path, slide_level, top_k_patches, patch_size=224,
     Args:
         svs_path: Path to the slide file
         slide_level: Pyramid level to save
-        top_k_patches: List of (row, col) tuples to annotate
+        top_k_patches: List of (x, y) pixel coordinate tuples at slide_level
         patch_size: Size of each patch in pixels
         output_path: Path to save the annotated image. If None, auto-generates path.
     
@@ -171,11 +186,12 @@ def save_annotated_slide(svs_path, slide_level, top_k_patches, patch_size=224,
     
     # Draw rectangles on the image
     draw = ImageDraw.Draw(slide_image)
-    for row, col in top_k_patches:
-        x1 = col * patch_size
-        y1 = row * patch_size
-        x2 = x1 + patch_size
-        y2 = y1 + patch_size
+    for x_level, y_level in top_k_patches:
+        # Coordinates are already at slide_level
+        x1 = int(x_level)
+        y1 = int(y_level)
+        x2 = int(x1 + patch_size)
+        y2 = int(y1 + patch_size)
         draw.rectangle([x1, y1, x2, y2], outline='green', width=5)
     
     # Generate output path if not provided
@@ -249,6 +265,11 @@ if __name__ == "__main__":
     chief.load_state_dict(torch.load('./model_weight/CHIEF_pretraining.pth', map_location=DEVICE), strict=True)
     chief.eval().to(DEVICE)
     
+    # Get downsample factor
+    slide_temp = openslide.OpenSlide(IMG_PATH)
+    downsample = slide_temp.level_downsamples[SLIDE_LEVEL]
+    slide_temp.close()
+    
     # Extract top K patches
     tim = time.time()
     print(f"\nExtracting top {TOP_K} patches...")
@@ -265,13 +286,13 @@ if __name__ == "__main__":
     )
     print('time taken:', time.time() - tim)
     
-    print(f"Top {TOP_K} patches: {top_k_patches}")
+    print(f"Top {TOP_K} patches (slide level {SLIDE_LEVEL} coordinates): {top_k_patches}")
     
     # Visualize heatmap without annotations
     visualize_heatmap(heatmap, output_path="patch_probability_heatmap.png")
     
     # Visualize heatmap with top K patches marked
-    visualize_heatmap(heatmap, top_k_patches, output_path="patch_probability_heatmap_top_k.png")
+    visualize_heatmap(heatmap, top_k_patches, PATCH_SIZE, output_path="patch_probability_heatmap_top_k.png")
     
     # Save the slide as JPG for reference
     save_slide_as_jpg(IMG_PATH, SLIDE_LEVEL)

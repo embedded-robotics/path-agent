@@ -17,6 +17,9 @@ __pycache__/
 PathGenCLIP_Retriever/pathgenclip_models/
 PathGenCLIP_Retriever/qdrant_db/
 CHIEF_HeatMap_API/model_weight/
+Histocartography_Patch_API/checkpoints/
+Complete_Patch_Extraction_API/output_patches/
+svs_examples/
 
 # Distribution / packaging
 build/
