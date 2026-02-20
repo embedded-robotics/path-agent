@@ -53,3 +53,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+# Local Complete API env artifacts
+Complete_Patch_Extraction_API/.python-version
+Complete_Patch_Extraction_API/.venv390/
+Complete_Patch_Extraction_API/requirements.runtime.txt
