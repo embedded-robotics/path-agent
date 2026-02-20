@@ -19,6 +19,56 @@ We introduce a distributed architecture consisting of five agent systems with a 
 ![Figure 1: Image Tessellation, Domain Knowledge Extraction, and Reasoning between different agents](https://github.com/embedded-robotics/path-agent/blob/master/PathAGENT.png)
 <p style="text-align:center;">Figure 1: Image Tessellation, Domain Knowledge Extraction, and Reasoning between different agents.</p>
 
+## 4. Runbook (Integrated Services)
+
+Run components in this order, each in its own environment:
+
+1. **CHIEF API** (`CHIEF_HeatMap_API`, Docker, port `8001`)
+```bash
+cd CHIEF_HeatMap_API
+docker run --name chief_run --gpus all -it \
+  -p 8001:8001 \
+  -v "$(pwd):/app/CHIEF" \
+  -v "/absolute/path/to/path-agent/svs_examples:/data" \
+  -w /app/CHIEF \
+  chiefcontainer/chief:v1.11 bash
+
+pip install fastapi uvicorn
+python3 chief_api.py
+```
+
+2. **Combined Patch API** (`Complete_Patch_Extraction_API`, venv, port `8003`)
+```bash
+cd Complete_Patch_Extraction_API
+source .venv390/bin/activate
+python complete_patch_extraction_api.py
+```
+
+3. **Retriever API** (`PathGenCLIP_Retriever`, optional, port `8000`)
+```bash
+cd PathGenCLIP_Retriever
+python app.py
+```
+
+4. **Agentic Orchestrator** (`pathrag-agentic-starter`)
+```bash
+cd pathrag-agentic-starter
+source .venv/bin/activate
+
+export PATHRAG_USE_COMBINED_API=1
+export PATHRAG_COMBINED_API_URL=http://localhost:8003/process
+export PATHRAG_USE_RETRIEVER_API=1
+export PATHRAG_RETRIEVER_API_URL=http://localhost:8000/retrieve_captions
+
+python scripts/run_langgraph.py
+```
+
+Health checks:
+```bash
+curl http://localhost:8001/health
+curl http://localhost:8003/health
+```
+
 References:
 1.	Chunyuan Li, Cliff Wong, Sheng Zhang, Naoto Usuyama, Haotian Liu, Jianwei Yang, Tristan Naumann, Hoifung Poon, and Jianfeng Gao. Llava-med: Training a large language-and-vision assistant for biomedicine in one day. Advances in Neural Information Processing Systems, 36, 2024.
 2.	Guillaume Jaume, Pushpak Pati, Valentin Anklin, Antonio Foncubierta, and Maria Gabrani. Histocartography: A toolkit for graph analytics in digital pathology. Proceedings of the MICCAI Workshop on Computational Pathology, volume 156 of Proceedings of Machine Learning Research, pp. 117–128. PMLR, 27 Sep 2021.

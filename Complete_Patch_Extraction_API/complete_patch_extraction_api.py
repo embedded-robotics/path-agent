@@ -41,7 +41,10 @@ knn_graph_builder = KNNGraphBuilder(k=5, thresh=50, add_loc_feats=True)
 logger.info("Initialization complete")
 
 # CHIEF API configuration
-CHIEF_API_URL = "http://localhost:8001/extract_patches"
+CHIEF_API_URL = os.getenv("CHIEF_API_URL", "http://localhost:8001/extract_patches")
+DEFAULT_REPO_SVS_DIR = str((Path(__file__).resolve().parents[1] / "svs_examples").resolve())
+CHIEF_MOUNT_HOST_PREFIX = os.getenv("CHIEF_MOUNT_HOST_PREFIX", DEFAULT_REPO_SVS_DIR)
+CHIEF_MOUNT_CONTAINER_PREFIX = os.getenv("CHIEF_MOUNT_CONTAINER_PREFIX", "/data")
 
 
 class CombinedRequest(BaseModel):
@@ -62,6 +65,41 @@ class CombinedResponse(BaseModel):
     patch_extraction_info: dict
     chief_response: Optional[dict] = None
     saved_patches_info: Optional[dict] = None
+
+
+def _normalize_path(path: str) -> str:
+    """Normalize path separators and resolve relative paths to absolute."""
+    p = (path or "").strip().replace("\\", "/")
+    if not p:
+        return p
+    if os.path.isabs(p):
+        return os.path.normpath(p)
+    return os.path.normpath(str(Path(p).resolve()))
+
+
+def _to_chief_container_path(local_path: str) -> str:
+    """
+    Map host image paths to container-visible paths for CHIEF.
+    If no mapping applies, return the original local path.
+    """
+    normalized = _normalize_path(local_path)
+    host_prefix = _normalize_path(CHIEF_MOUNT_HOST_PREFIX)
+    container_prefix = _normalize_path(CHIEF_MOUNT_CONTAINER_PREFIX)
+
+    if normalized.startswith(container_prefix):
+        return normalized
+
+    if host_prefix and normalized.startswith(host_prefix):
+        rel = normalized[len(host_prefix):].lstrip("/\\")
+        return os.path.normpath(f"{container_prefix}/{rel}")
+
+    # Fallback: if path contains /svs_examples/, map trailing segment to /data.
+    marker = "/svs_examples/"
+    if marker in normalized:
+        tail = normalized.split(marker, 1)[1].lstrip("/\\")
+        return os.path.normpath(f"{container_prefix}/{tail}")
+
+    return normalized
 
 
 def svs_to_image(svs_path: str, level: int = None) -> Tuple[Image.Image, str, int]:
@@ -387,8 +425,9 @@ def call_chief_api(image_path: str, patch_size: int, anatomical_label: int,
     """
     logger.info(f"Calling CHIEF API at {CHIEF_API_URL}")
     
+    chief_image_path = _to_chief_container_path(image_path)
     payload = {
-        "image_path": image_path,
+        "image_path": chief_image_path,
         "patch_size": patch_size,
         "anatomical_label": anatomical_label,
         "slide_level": slide_level,
@@ -454,12 +493,14 @@ async def process_endpoint(request: CombinedRequest):
     try:
         logger.info(f"Received combined processing request: {request}")
         
-        # Validate file exists
-        if not os.path.exists(request.image_path):
-            raise HTTPException(status_code=404, detail=f"Image file not found: {request.image_path}")
+        local_image_path = _normalize_path(request.image_path)
+
+        # Validate file exists on the host where this API runs
+        if not os.path.exists(local_image_path):
+            raise HTTPException(status_code=404, detail=f"Image file not found: {local_image_path}")
         
         # Validate file type
-        file_ext = Path(request.image_path).suffix.lower()
+        file_ext = Path(local_image_path).suffix.lower()
         if file_ext != '.svs':
             raise HTTPException(
                 status_code=400, 
@@ -468,7 +509,7 @@ async def process_endpoint(request: CombinedRequest):
         
         # Step 1: Extract patches
         logger.info("Step 1: Extracting patches...")
-        image, level_info, actual_slide_level = svs_to_image(request.image_path, request.svs_level)
+        image, level_info, actual_slide_level = svs_to_image(local_image_path, request.svs_level)
         patch_info_list, non_selected_patches = extract_patches(image=image, top_n=request.top_n)
         
         if not patch_info_list:
@@ -497,7 +538,7 @@ async def process_endpoint(request: CombinedRequest):
         # Step 2: Call CHIEF API with extracted coordinates
         logger.info("Step 2: Calling CHIEF API...")
         chief_response = call_chief_api(
-            image_path=request.image_path,
+            image_path=local_image_path,
             patch_size=request.patch_size,
             anatomical_label=request.anatomical_label,
             slide_level=actual_slide_level,
@@ -519,7 +560,7 @@ async def process_endpoint(request: CombinedRequest):
                 
                 # Save patches using slide_level coordinates
                 saved_files = save_chief_patches(
-                    svs_path=request.image_path,
+                    svs_path=local_image_path,
                     slide_level=actual_slide_level,
                     chief_patches=chief_patches,  # slide_level coordinates
                     output_dir="output_patches"
@@ -534,7 +575,7 @@ async def process_endpoint(request: CombinedRequest):
                 # Create visualization using slide_level coordinates
                 valid_bounds_level = [[p['x1'], p['y1'], p['x2'], p['y2']] for p in patch_info_list]
                 viz_path = create_visualization(
-                    svs_path=request.image_path,
+                    svs_path=local_image_path,
                     slide_level=actual_slide_level,
                     valid_bounds=valid_bounds_level,  # slide_level coordinates (blue - selected)
                     chief_patches=chief_patches,  # slide_level coordinates (green - final)

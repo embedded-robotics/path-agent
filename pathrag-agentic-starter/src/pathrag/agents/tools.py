@@ -14,6 +14,8 @@ Notes:
 from __future__ import annotations
 from typing import List, Dict, Any, Iterable, Tuple
 import os, json
+import urllib.request
+import urllib.error
 from dataclasses import dataclass
 from pathlib import Path
 from PIL import Image
@@ -41,6 +43,26 @@ DEFAULT_TOP_K = 3
 
 OUTPUT_ROOT = Path(os.getenv("OUTPUT_ROOT", "src/pathrag/pipeline/files"))
 (OUTPUT_ROOT / "query").mkdir(parents=True, exist_ok=True)
+
+_LAST_IMAGE_PATH: str | None = None
+
+
+def _post_json(url: str, payload: dict, timeout: int = 1800) -> dict:
+    req = urllib.request.Request(
+        url=url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8")
+            return json.loads(body) if body else {}
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {e.code} from {url}: {detail}") from e
+    except Exception as e:
+        raise RuntimeError(f"Failed POST {url}: {e}") from e
 
 import subprocess
 from pathlib import Path
@@ -101,6 +123,8 @@ def tile_image(image_path: str, tile_size: int = 224) -> List[Patch]:
     Returns:
         A dense list of Patch with zero scores (to be ranked in the next step).
     """
+    global _LAST_IMAGE_PATH
+    _LAST_IMAGE_PATH = image_path
     # TODO (real impl):
     #   - Use OpenSlide/pyvips/tifffile to stream tiles without loading the full WSI.
     #   - Compute (W, H) from image metadata; iterate y,x over range(0, H, stride).
@@ -192,6 +216,31 @@ def common_patches(hc: List[Patch], cheif: List[Patch], top_k: int = 6) -> List[
     Returns:
         Top-K fused Patch list (desc by aggregated score).
     """
+    use_combined_api = os.getenv("PATHRAG_USE_COMBINED_API", "0") == "1"
+    combined_api_url = os.getenv("PATHRAG_COMBINED_API_URL", "http://localhost:8003/process")
+    if use_combined_api and _LAST_IMAGE_PATH and str(_LAST_IMAGE_PATH).lower().endswith(".svs"):
+        try:
+            payload = {
+                "image_path": _LAST_IMAGE_PATH,
+                "svs_level": int(os.getenv("PATHRAG_SVS_LEVEL", "2")),
+                "top_n": top_k,
+                "save_patches": False,
+                "patch_size": int(os.getenv("PATHRAG_PATCH_SIZE", "224")),
+                "anatomical_label": int(os.getenv("PATHRAG_ANATOMICAL_LABEL", "1")),
+                "top_k": top_k,
+            }
+            res = _post_json(combined_api_url, payload, timeout=int(os.getenv("PATHRAG_HTTP_TIMEOUT", "1800")))
+            chief = (res.get("chief_response") or {}).get("top_k_patches") or []
+            if chief:
+                out: List[Patch] = []
+                for i, p in enumerate(chief):
+                    bbox = (int(p["x1"]), int(p["y1"]), int(p["x2"]), int(p["y2"]))
+                    out.append(Patch(id=f"CP{i}", bbox=bbox, score=float(len(chief) - i)))
+                logger.info(f"Used Combined API patches (k={len(out)})")
+                return out[:top_k]
+        except Exception as e:
+            logger.warning(f"Combined API fallback to local fusion: {e}")
+
     band = top_k * 2
     by_id: Dict[str, Tuple[Tuple[int,int,int,int], List[float]]] = {}
 
@@ -229,6 +278,8 @@ def identify_subpathology(image_path: str) -> str:
     Returns:
         A normalized label string (e.g., "squamous_cell_carcinoma").
     """
+    global _LAST_IMAGE_PATH
+    _LAST_IMAGE_PATH = image_path
     return predict_tissue(image_path)["label"]  # TODO (real impl):
 
 
@@ -245,6 +296,23 @@ def retrieve_subpath_captions(label: str, top_m: int = 5) -> list[str]:
     Returns:
         List of short strings (captions/knowledge to condition later agents).
     """
+    use_retriever_api = os.getenv("PATHRAG_USE_RETRIEVER_API", "0") == "1"
+    retriever_url = os.getenv("PATHRAG_RETRIEVER_API_URL", "http://localhost:8000/retrieve_captions")
+    if use_retriever_api and _LAST_IMAGE_PATH:
+        try:
+            payload = {
+                "images": [_LAST_IMAGE_PATH],
+                "anatomical_site": label,
+                "k": top_m,
+            }
+            res = _post_json(retriever_url, payload, timeout=int(os.getenv("PATHRAG_HTTP_TIMEOUT", "120")))
+            # Endpoint returns List[List[Dict]]
+            first = res[0] if isinstance(res, list) and res else []
+            caps = [str(r.get("caption", "")).strip() for r in first if isinstance(r, dict) and r.get("caption")]
+            if caps:
+                return caps[:top_m]
+        except Exception as e:
+            logger.warning(f"Retriever API fallback to local bank: {e}")
     return captions_for_label(label, top_m=top_m)    # TODO (real impl):
 
 
@@ -322,6 +390,62 @@ def patch_agent_contribution(patch: Patch, question: str, full_captions: list[st
         return texts[0] if texts else f"[patch-fallback] {patch.id} via {cap}"
     except Exception as e:
         return f"[patch-error] {e}"
+
+
+@dataclass
+class PatchInfo:
+    id: str
+    bbox: Tuple[int, int, int, int]
+    score: float = 0.0
+
+
+def run_histocartography(image_path: str, top_k: int = 3) -> Dict[str, Any]:
+    tiles = tile_image(image_path)
+    hc = histocartography_rank(image_path, tiles)
+    ch = cheif_rank(image_path, tiles)
+    fused = common_patches(hc, ch, top_k=top_k)
+    return {
+        "tiles": [t.__dict__ for t in tiles],
+        "patches": [PatchInfo(id=p.id, bbox=p.bbox, score=p.score).__dict__ for p in fused],
+    }
+
+
+def make_llava_query_files(image_path: str, question: str, patches: List[PatchInfo]) -> Dict[str, str]:
+    crop_paths = save_crops(image_path, [p.bbox for p in patches], "artifacts/crops")
+    qfile = Path("artifacts/query/patch_questions.jsonl").resolve()
+    rows = _rows_for_patches(crop_paths, question)
+    _write_jsonl(rows, str(qfile))
+    return {"question_jsonl": str(qfile), "crop_dir": str(Path("artifacts/crops").resolve())}
+
+
+def prepare_and_run(image_path: str, question: str, mode: str = "answer", top_k: int = 3) -> Dict[str, Any]:
+    from pathrag.agents.langgraph_app import build_graph
+
+    app = build_graph()
+    init = {
+        "image_path": image_path,
+        "question": question,
+        "mode": mode,
+        "top_k": top_k,
+        "max_rounds": int(os.getenv("PATHRAG_MAX_ROUNDS", "1")),
+        "round_ix": 0,
+    }
+    last = None
+    for s in app.stream(init, config={"configurable": {"thread_id": "autogen-run"}}):
+        last = s
+
+    if not isinstance(last, dict):
+        return {"final_answer": "", "patches": [], "full_captions": []}
+
+    fuse = last.get("fuse", last)
+    identify = last.get("identify", last)
+    tile = last.get("tile_rank", last)
+    return {
+        "final_answer": fuse.get("final_answer", last.get("final_answer", "")),
+        "patches": tile.get("patches", last.get("patches", [])),
+        "full_captions": identify.get("full_captions", last.get("full_captions", [])),
+        "subpath_label": identify.get("subpath_label", last.get("subpath_label", "")),
+    }
 
 # =====================================
 # STAGE 6: QUESTION-AWARE RE-RANK TOPK

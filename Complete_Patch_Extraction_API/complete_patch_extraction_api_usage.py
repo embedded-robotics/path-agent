@@ -6,13 +6,16 @@ Update the parameters to match your requirements
 import requests
 import json
 import time
+import os
+from pathlib import Path
 
 # Combined API endpoint
 API_URL = "http://localhost:8003"
+DEFAULT_SVS_IMAGE_PATH = str((Path(__file__).resolve().parents[1] / "svs_examples" / "19.svs").resolve())
 
 # Request parameters
 payload = {
-    "image_path": "E:/Quilt1M/Gitti/path-agent/svs_examples/19.svs",  # Path to your SVS file
+    "image_path": os.getenv("SVS_IMAGE_PATH", DEFAULT_SVS_IMAGE_PATH),
     "svs_level": 2,                               # SVS level (same as slide_level for CHIEF)
     "top_n": 3,                                   # Number of top patches to extract
     "save_patches": True,                         # Whether to save patches to disk

@@ -37,6 +37,44 @@ python scripts/run_langgraph.py
 FINAL ANSWER: [mocked] keratinization (example)
 ``` :contentReference[oaicite:1]{index=1}
 
+## Service Mode (Isolated Environments)
+
+For the integrated setup, keep each component in its own environment and call them over HTTP:
+
+- `CHIEF_HeatMap_API` -> Docker container (`http://localhost:8001`)
+- `Complete_Patch_Extraction_API` -> dedicated `venv` (`http://localhost:8003`)
+- `PathGenCLIP_Retriever` -> dedicated `venv` (`http://localhost:8000`, optional)
+- `pathrag-agentic-starter` -> its own `venv` (orchestrator only)
+
+### Run order
+
+1. Start CHIEF API.
+2. Start Combined API (`Complete_Patch_Extraction_API`).
+3. (Optional) Start Retriever API.
+4. Run starter with service flags:
+
+```bash
+cd /home/sina/projects/path-agent/pathrag-agentic-starter
+source .venv/bin/activate
+
+export PATHRAG_USE_COMBINED_API=1
+export PATHRAG_COMBINED_API_URL=http://localhost:8003/process
+
+# optional retriever service
+export PATHRAG_USE_RETRIEVER_API=1
+export PATHRAG_RETRIEVER_API_URL=http://localhost:8000/retrieve_captions
+
+python scripts/run_langgraph.py
+```
+
+### Service env knobs
+
+- `PATHRAG_USE_COMBINED_API`: `1` to use external patch extraction + CHIEF flow.
+- `PATHRAG_COMBINED_API_URL`: Combined API endpoint.
+- `PATHRAG_USE_RETRIEVER_API`: `1` to use external caption retriever.
+- `PATHRAG_RETRIEVER_API_URL`: Retriever API endpoint.
+- `PATHRAG_HTTP_TIMEOUT`: HTTP timeout (seconds, default `1800` for Combined API calls).
+
 ---
 
 ## Repo structure
