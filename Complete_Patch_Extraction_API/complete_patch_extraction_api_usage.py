@@ -1,6 +1,10 @@
 """
 Combined API Usage Example - Extract patches and process through CHIEF API
 Update the parameters to match your requirements
+
+Supported input types: .svs, .jpg/.jpeg, .tif/.tiff, .png
+For .svs, svs_level is used.
+For flat images (.jpg/.tif/.png), svs_level is ignored.
 """
 
 import requests
@@ -12,8 +16,8 @@ API_URL = "http://localhost:8003"
 
 # Request parameters
 payload = {
-    "image_path": "E:/Quilt1M/Gitti/path-agent/svs_examples/19.svs",  # Path to your SVS file
-    "svs_level": 2,                               # SVS level (same as slide_level for CHIEF)
+    "image_path": "E:/Quilt1M/Gitti/path-agent/wsi_examples/19_level2.jpg",  # .svs or flat image path
+    "svs_level": 2,                               # Used only for .svs inputs
     "top_n": 3,                                   # Number of top patches to extract
     "save_patches": True,                         # Whether to save patches to disk
     "patch_size": 224,                            # Patch size for CHIEF processing

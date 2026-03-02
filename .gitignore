@@ -19,7 +19,8 @@ PathGenCLIP_Retriever/qdrant_db/
 CHIEF_HeatMap_API/model_weight/
 Histocartography_Patch_API/checkpoints/
 Complete_Patch_Extraction_API/output_patches/
-svs_examples/
+wsi_examples/
+SVS_Converter/jpg_outputs/
 
 # Distribution / packaging
 build/

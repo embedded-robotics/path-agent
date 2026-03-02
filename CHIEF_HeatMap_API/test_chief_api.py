@@ -5,7 +5,7 @@ url = "http://localhost:8001/extract_patches"
 
 # Request payload
 payload = {
-    "img_path": "E:/Quilt1M/Gitti/path-agent/svs_examples/19.svs",
+    "img_path": "E:/Quilt1M/Gitti/path-agent/wsi_examples/19.svs",
     "patch_size": 224,
     "anatomical_label": 1,
     "slide_level": 2,
