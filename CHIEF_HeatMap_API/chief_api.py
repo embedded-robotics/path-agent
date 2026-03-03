@@ -20,12 +20,25 @@ chief = None
 DEVICE = None
 
 def get_smart_path(full_windows_path):
-    if platform.system() == "Linux" or os.path.exists('/.dockerenv'):
-        search_str = "svs_examples"
-        if search_str in full_windows_path:
-            relative_part = full_windows_path.split(search_str)[-1]
-            container_path = os.path.join("/data", relative_part.lstrip('\\/')).replace('\\', '/')
-            return container_path
+    if os.path.exists(full_windows_path):
+        return full_windows_path
+
+    in_container = platform.system() == "Linux" or os.path.exists('/.dockerenv')
+    if not in_container:
+        return full_windows_path
+
+    normalized = full_windows_path.replace('\\', '/')
+
+    for marker in ["svs_examples", "wsi_examples"]:
+        if marker in normalized:
+            relative_part = normalized.split(marker, 1)[-1].lstrip('/\\')
+            container_path = os.path.join("/data", relative_part).replace('\\', '/')
+            if os.path.exists(container_path):
+                return container_path
+
+    fallback_path = os.path.join("/data", os.path.basename(normalized)).replace('\\', '/')
+    if os.path.exists(fallback_path):
+        return fallback_path
 
     return full_windows_path
 

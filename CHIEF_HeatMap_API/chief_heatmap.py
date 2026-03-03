@@ -301,7 +301,7 @@ def save_slide_as_jpg(svs_path, slide_level, output_path=None):
 if __name__ == "__main__":
     # Configuration
     print('yoyo')
-    IMG_PATH = "example_svs/19.svs"
+    IMG_PATH = "wsi_examples/19_level2.jpg"
     PATCH_SIZE = 224
     ANATOMICAL_LABEL = 1
     SLIDE_LEVEL = 2
