@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 
 import openslide
 from PIL import Image
+from tqdm import tqdm
 
 
 SUPPORTED_OUTPUT_FORMATS = {"jpg", "jpeg", "tif", "tiff"}
@@ -80,16 +81,21 @@ def convert_svs_to_tif(
     Returns:
         Output file path.
     """
-    image = _read_svs_level_image(svs_path, slide_level)
+    with tqdm(total=3, desc="Converting to TIFF", unit="step") as pbar:
+        image = _read_svs_level_image(svs_path, slide_level)
+        pbar.update(1)
 
-    if output_path is None:
-        output_path = _default_output_path(svs_path, "tif", slide_level)
+        if output_path is None:
+            output_path = _default_output_path(svs_path, "tif", slide_level)
 
-    output_dir = os.path.dirname(output_path)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir = os.path.dirname(output_path)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        pbar.update(1)
 
-    image.save(output_path, format="TIFF", compression=compression)
+        image.save(output_path, format="TIFF", compression=compression)
+        pbar.update(1)
+
     print(f"Saved TIFF: {output_path}")
     return output_path
 
@@ -112,16 +118,21 @@ def convert_svs_to_jpg(
     Returns:
         Output file path.
     """
-    image = _read_svs_level_image(svs_path, slide_level)
+    with tqdm(total=3, desc="Converting to JPG", unit="step") as pbar:
+        image = _read_svs_level_image(svs_path, slide_level)
+        pbar.update(1)
 
-    if output_path is None:
-        output_path = _default_output_path(svs_path, "jpg", slide_level)
+        if output_path is None:
+            output_path = _default_output_path(svs_path, "jpg", slide_level)
 
-    output_dir = os.path.dirname(output_path)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir = os.path.dirname(output_path)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        pbar.update(1)
 
-    image.save(output_path, format="JPEG", quality=quality)
+        image.save(output_path, format="JPEG", quality=quality)
+        pbar.update(1)
+
     print(f"Saved JPG: {output_path}")
     return output_path
 
@@ -173,8 +184,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "svs_path",
         nargs="?",
-        default="svs_examples/19.svs",
-        help="Path to input SVS file (default: svs_examples/19.svs)",
+        default="svs_examples/07.svs",
+        help="Path to input SVS file (default: svs_examples/07.svs)",
     )
     parser.add_argument(
         "--format",
