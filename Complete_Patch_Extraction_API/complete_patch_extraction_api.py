@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="Combined Patch Extraction & CHIEF Processing API",
-    description="Extract patches from SVS images and process them through CHIEF API",
+    description="Extract patches from SVS or flat images and process them through CHIEF API",
     version="1.0.0"
 )
 
@@ -45,12 +45,26 @@ CHIEF_API_URL = os.getenv("CHIEF_API_URL", "http://localhost:8001/extract_patche
 DEFAULT_REPO_SVS_DIR = str((Path(__file__).resolve().parents[1] / "svs_examples").resolve())
 CHIEF_MOUNT_HOST_PREFIX = os.getenv("CHIEF_MOUNT_HOST_PREFIX", DEFAULT_REPO_SVS_DIR)
 CHIEF_MOUNT_CONTAINER_PREFIX = os.getenv("CHIEF_MOUNT_CONTAINER_PREFIX", "/data")
+SVS_EXTENSIONS = {'.svs'}
+FLAT_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.tif', '.tiff', '.png'}
+
+
+def _get_file_ext(path: str) -> str:
+    return Path(path).suffix.lower()
+
+
+def _is_svs(path: str) -> bool:
+    return _get_file_ext(path) in SVS_EXTENSIONS
+
+
+def _is_flat_image(path: str) -> bool:
+    return _get_file_ext(path) in FLAT_IMAGE_EXTENSIONS
 
 
 class CombinedRequest(BaseModel):
     """Request model for combined patch extraction and CHIEF processing"""
-    image_path: str = Field(..., description="Path to the SVS image file")
-    svs_level: Optional[int] = Field(None, description="SVS level to use (0=highest resolution). If None, uses the smallest level.")
+    image_path: str = Field(..., description="Path to input image file (.svs, .jpg/.jpeg, .tif/.tiff, .png)")
+    svs_level: Optional[int] = Field(None, description="SVS level to use (0=highest resolution). If None, uses the smallest level. Ignored for non-SVS files, which are treated as already at the required level.")
     top_n: int = Field(6, description="Number of top patches to extract based on nuclei density", ge=1)
     save_patches: bool = Field(False, description="Whether to save patches to disk")
     patch_size: int = Field(224, description="Patch size for CHIEF processing", ge=1)
@@ -141,6 +155,28 @@ def svs_to_image(svs_path: str, level: int = None) -> Tuple[Image.Image, str, in
     
     slide.close()
     return img, level_info, level
+
+
+def load_input_image(image_path: str, svs_level: Optional[int] = None) -> Tuple[Image.Image, Optional[str], int]:
+    """
+    Load input image from SVS or flat image path.
+
+    For SVS: reads the selected pyramid level and returns actual level used.
+    For flat images: treats the image as already at required level and returns level 0.
+    """
+    if _is_svs(image_path):
+        image, level_info, actual_level = svs_to_image(image_path, svs_level)
+        return image, level_info, actual_level
+
+    if _is_flat_image(image_path):
+        logger.info("Processing flat image input (already at required level)")
+        image = Image.open(image_path).convert('RGB')
+        return image, None, 0
+
+    ext = _get_file_ext(image_path)
+    raise ValueError(
+        f"Unsupported file format: {ext}. Supported formats: .svs, .jpg, .jpeg, .tif, .tiff, .png"
+    )
 
 
 def extract_patches(image: Image.Image, top_n: int = 6) -> Tuple[List[dict], List[dict]]:
@@ -247,14 +283,14 @@ def extract_patches(image: Image.Image, top_n: int = 6) -> Tuple[List[dict], Lis
     return top_patch_info, non_selected_patch_info
 
 
-def save_chief_patches(svs_path: str, slide_level: int, chief_patches: List[dict], 
+def save_chief_patches(image_path: str, slide_level: int, chief_patches: List[dict],
                        output_dir: str = "output_patches") -> List[str]:
     """
     Save patches from CHIEF API coordinates as individual JPG files.
     
     Args:
-        svs_path: Path to the SVS file
-        slide_level: SVS level to extract from
+        image_path: Path to the input image file
+        slide_level: SVS level to extract from (ignored for flat images)
         chief_patches: List of dicts with x1, y1, x2, y2 coordinates at the specified slide_level
         output_dir: Directory to save patches
     
@@ -273,45 +309,59 @@ def save_chief_patches(svs_path: str, slide_level: int, chief_patches: List[dict
             os.remove(file_path)
             logger.info(f"Removed existing file: {file}")
     
-    # Open slide
-    slide = openslide.OpenSlide(svs_path)
-    downsample = slide.level_downsamples[slide_level]
     saved_files = []
-    
-    try:
-        for idx, patch_info in enumerate(chief_patches, start=1):
-            # Coordinates are at slide_level, need to convert to level 0 for read_region
-            x1_level = patch_info['x1']
-            y1_level = patch_info['y1']
-            x2_level = patch_info['x2']
-            y2_level = patch_info['y2']
-            
-            # Convert slide_level coordinates to level 0 for OpenSlide read_region
-            x1_level0 = int(x1_level * downsample)
-            y1_level0 = int(y1_level * downsample)
-            
-            # Calculate size at slide_level
-            patch_width = x2_level - x1_level
-            patch_height = y2_level - y1_level
-            
-            # Extract patch from slide (location in level 0, size in level pixels)
-            # OpenSlide read_region: location in level 0, level to read from, size in level pixels
-            patch = slide.read_region((x1_level0, y1_level0), slide_level, (patch_width, patch_height)).convert("RGB")
-            
-            # Save patch
-            output_path = os.path.join(output_dir, f"patch_{idx}.jpg")
-            patch.save(output_path, "JPEG", quality=95)
-            saved_files.append(output_path)
-            logger.info(f"Saved patch_{idx}.jpg at slide level {slide_level} coordinates ({x1_level}, {y1_level}, {x2_level}, {y2_level})")
-    
-    finally:
-        slide.close()
+
+    if _is_svs(image_path):
+        slide = openslide.OpenSlide(image_path)
+        downsample = slide.level_downsamples[slide_level]
+
+        try:
+            for idx, patch_info in enumerate(chief_patches, start=1):
+                x1_level = patch_info['x1']
+                y1_level = patch_info['y1']
+                x2_level = patch_info['x2']
+                y2_level = patch_info['y2']
+
+                x1_level0 = int(x1_level * downsample)
+                y1_level0 = int(y1_level * downsample)
+                patch_width = x2_level - x1_level
+                patch_height = y2_level - y1_level
+
+                patch = slide.read_region((x1_level0, y1_level0), slide_level, (patch_width, patch_height)).convert("RGB")
+
+                output_path = os.path.join(output_dir, f"patch_{idx}.jpg")
+                patch.save(output_path, "JPEG", quality=95)
+                saved_files.append(output_path)
+                logger.info(f"Saved patch_{idx}.jpg at slide level {slide_level} coordinates ({x1_level}, {y1_level}, {x2_level}, {y2_level})")
+        finally:
+            slide.close()
+    else:
+        base_image = Image.open(image_path).convert('RGB')
+        try:
+            img_w, img_h = base_image.size
+            for idx, patch_info in enumerate(chief_patches, start=1):
+                x1 = int(max(0, patch_info['x1']))
+                y1 = int(max(0, patch_info['y1']))
+                x2 = int(min(img_w, patch_info['x2']))
+                y2 = int(min(img_h, patch_info['y2']))
+
+                if x2 <= x1 or y2 <= y1:
+                    logger.warning(f"Skipping invalid patch_{idx} coords: ({x1}, {y1}, {x2}, {y2})")
+                    continue
+
+                patch = base_image.crop((x1, y1, x2, y2))
+                output_path = os.path.join(output_dir, f"patch_{idx}.jpg")
+                patch.save(output_path, "JPEG", quality=95)
+                saved_files.append(output_path)
+                logger.info(f"Saved patch_{idx}.jpg at flat-image coordinates ({x1}, {y1}, {x2}, {y2})")
+        finally:
+            base_image.close()
     
     logger.info(f"Successfully saved {len(saved_files)} patches")
     return saved_files
 
 
-def create_visualization(svs_path: str, slide_level: int, valid_bounds: List[List[int]], 
+def create_visualization(image_path: str, slide_level: int, valid_bounds: List[List[int]],
                         chief_patches: List[dict],
                         non_selected_patches: List[dict] = None,
                         output_dir: str = "output_patches") -> str:
@@ -320,8 +370,8 @@ def create_visualization(svs_path: str, slide_level: int, valid_bounds: List[Lis
     All coordinates should be at the specified slide_level.
     
     Args:
-        svs_path: Path to the SVS file
-        slide_level: SVS level to visualize
+        image_path: Path to input image file
+        slide_level: SVS level to visualize (ignored for flat images)
         valid_bounds: List of [x1, y1, x2, y2] coordinates at slide_level (selected histocartography)
         chief_patches: List of dicts with x1, y1, x2, y2 coordinates at slide_level (CHIEF final)
         non_selected_patches: List of dicts with x1, y1, x2, y2 coordinates (non-selected histocartography)
@@ -332,11 +382,14 @@ def create_visualization(svs_path: str, slide_level: int, valid_bounds: List[Lis
     """
     logger.info("Creating WSI visualization with patch annotations")
     
-    # Load the slide at specified level
-    slide = openslide.OpenSlide(svs_path)
-    width, height = slide.level_dimensions[slide_level]
-    slide_image = slide.read_region((0, 0), slide_level, (width, height)).convert("RGB")
-    slide.close()
+    # Load base image for annotation
+    if _is_svs(image_path):
+        slide = openslide.OpenSlide(image_path)
+        width, height = slide.level_dimensions[slide_level]
+        slide_image = slide.read_region((0, 0), slide_level, (width, height)).convert("RGB")
+        slide.close()
+    else:
+        slide_image = Image.open(image_path).convert("RGB")
     
     # Draw on the image
     draw = ImageDraw.Draw(slide_image)
@@ -475,7 +528,7 @@ async def health_check():
 @app.post("/process", response_model=CombinedResponse)
 async def process_endpoint(request: CombinedRequest):
     """
-    Extract top N patches from SVS image and process them through CHIEF API.
+    Extract top N patches from SVS or flat image and process them through CHIEF API.
     
     This endpoint:
     1. Extracts top N patches based on nuclei density
@@ -499,18 +552,13 @@ async def process_endpoint(request: CombinedRequest):
         if not os.path.exists(local_image_path):
             raise HTTPException(status_code=404, detail=f"Image file not found: {local_image_path}")
         
-        # Validate file type
-        file_ext = Path(local_image_path).suffix.lower()
-        if file_ext != '.svs':
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Only SVS files are supported. Got: {file_ext}"
-            )
-        
         # Step 1: Extract patches
         logger.info("Step 1: Extracting patches...")
-        image, level_info, actual_slide_level = svs_to_image(local_image_path, request.svs_level)
-        patch_info_list, non_selected_patches = extract_patches(image=image, top_n=request.top_n)
+        image, level_info, actual_slide_level = load_input_image(local_image_path, request.svs_level)
+        try:
+            patch_info_list, non_selected_patches = extract_patches(image=image, top_n=request.top_n)
+        finally:
+            image.close()
         
         if not patch_info_list:
             return CombinedResponse(
@@ -560,7 +608,7 @@ async def process_endpoint(request: CombinedRequest):
                 
                 # Save patches using slide_level coordinates
                 saved_files = save_chief_patches(
-                    svs_path=local_image_path,
+                    image_path=local_image_path,
                     slide_level=actual_slide_level,
                     chief_patches=chief_patches,  # slide_level coordinates
                     output_dir="output_patches"
@@ -575,7 +623,7 @@ async def process_endpoint(request: CombinedRequest):
                 # Create visualization using slide_level coordinates
                 valid_bounds_level = [[p['x1'], p['y1'], p['x2'], p['y2']] for p in patch_info_list]
                 viz_path = create_visualization(
-                    svs_path=local_image_path,
+                    image_path=local_image_path,
                     slide_level=actual_slide_level,
                     valid_bounds=valid_bounds_level,  # slide_level coordinates (blue - selected)
                     chief_patches=chief_patches,  # slide_level coordinates (green - final)

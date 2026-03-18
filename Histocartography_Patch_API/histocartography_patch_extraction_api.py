@@ -1,6 +1,6 @@
 """
-FastAPI endpoint for patch extraction from SVS or JPG pathology images.
-This API provides endpoints to extract top N patches from whole slide images or JPG files.
+FastAPI endpoint for patch extraction from SVS or flat pathology images.
+This API provides endpoints to extract top N patches from SVS, JPG/JPEG, TIFF, or PNG files.
 """
 
 from fastapi import FastAPI, HTTPException, Query
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app with custom timeout hint
 app = FastAPI(
     title="Pathology Patch Extraction API",
-    description="Extract top N patches from SVS or JPG pathology images based on nuclei density",
+    description="Extract top N patches from SVS or flat pathology images based on nuclei density",
     version="1.0.0"
 )
 
@@ -41,8 +41,8 @@ logger.info("Initialization complete")
 
 class PatchRequest(BaseModel):
     """Request model for patch extraction"""
-    image_path: str = Field(..., description="Path to the SVS or JPG image file")
-    svs_level: Optional[int] = Field(None, description="SVS level to use (0=highest resolution). If None, uses the smallest level. Only applicable for SVS files.")
+    image_path: str = Field(..., description="Path to the input image file (.svs, .jpg/.jpeg, .tif/.tiff, .png)")
+    svs_level: Optional[int] = Field(None, description="SVS level to use (0=highest resolution). If None, uses the smallest level. Ignored for non-SVS files, which are treated as already at the required level.")
     top_n: int = Field(6, description="Number of top patches to extract based on nuclei density", ge=1)
     save_patches: bool = Field(False, description="Whether to save patches to disk")
     output_dir: Optional[str] = Field("output_patches", description="Directory to save patches (if save_patches=True)")
@@ -243,13 +243,13 @@ async def health_check():
 @app.post("/extract_patches", response_model=PatchResponse)
 async def extract_patches_endpoint(request: PatchRequest):
     """
-    Extract top N patches from an SVS or JPG pathology image.
+    Extract top N patches from an SVS or flat pathology image.
     
     Note: Processing may take up to 15 minutes for large images.
     The endpoint will not timeout during processing.
     
     Args:
-        request: PatchRequest containing image_path, svs_level, top_n, save_patches, output_dir
+        request: PatchRequest containing image_path, svs_level (SVS only), top_n, save_patches, output_dir
     
     Returns:
         PatchResponse with coordinates and metadata
@@ -267,13 +267,13 @@ async def extract_patches_endpoint(request: PatchRequest):
         if file_ext == '.svs':
             logger.info("Processing SVS file...")
             image, level_info = svs_to_image(request.image_path, request.svs_level)
-        elif file_ext in ['.jpg', '.jpeg', '.png']:
-            logger.info("Processing image file...")
+        elif file_ext in ['.jpg', '.jpeg', '.png', '.tif', '.tiff']:
+            logger.info("Processing flat image file (already at requested level)...")
             image = Image.open(request.image_path).convert('RGB')
         else:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Unsupported file format: {file_ext}. Supported formats: .svs, .jpg, .jpeg, .png"
+                detail=f"Unsupported file format: {file_ext}. Supported formats: .svs, .jpg, .jpeg, .tif, .tiff, .png"
             )
         
         # Extract patches

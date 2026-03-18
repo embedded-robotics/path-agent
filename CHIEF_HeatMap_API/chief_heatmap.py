@@ -14,6 +14,22 @@ from tqdm import tqdm
 import time
 
 
+SVS_EXTENSIONS = {'.svs'}
+FLAT_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.tif', '.tiff'}
+
+
+def _get_file_extension(path):
+    return os.path.splitext(path)[1].lower()
+
+
+def _is_svs_path(path):
+    return _get_file_extension(path) in SVS_EXTENSIONS
+
+
+def _is_flat_image_path(path):
+    return _get_file_extension(path) in FLAT_IMAGE_EXTENSIONS
+
+
 def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chief, 
                           anatomical_label=1, patch_size=224, device='cuda'):
     """
@@ -43,25 +59,50 @@ def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chie
         transforms.Normalize(mean, std)
     ])
     
-    # Load WSI using OpenSlide
-    slide = openslide.OpenSlide(svs_path)
-    img_w, img_h = slide.level_dimensions[slide_level]
-    downsample = slide.level_downsamples[slide_level]
-    print(f"Processing slide at level {slide_level}: {img_w}x{img_h}, downsample: {downsample}")
+    input_path = svs_path
+    ext = _get_file_extension(input_path)
+
+    # Build a unified patch reader for svs and flat images
+    slide = None
+    pil_image = None
+
+    if _is_svs_path(input_path):
+        slide = openslide.OpenSlide(input_path)
+        img_w, img_h = slide.level_dimensions[slide_level]
+        downsample = slide.level_downsamples[slide_level]
+        print(f"Processing SVS at level {slide_level}: {img_w}x{img_h}, downsample: {downsample}")
+
+        def read_patch(left_level, top_level):
+            left_level0 = int(left_level * downsample)
+            top_level0 = int(top_level * downsample)
+            return slide.read_region((left_level0, top_level0), slide_level, (patch_size, patch_size)).convert("RGB")
+
+    elif _is_flat_image_path(input_path):
+        pil_image = Image.open(input_path).convert("RGB")
+        img_w, img_h = pil_image.size
+        print(f"Processing flat image ({ext}) as level {slide_level}: {img_w}x{img_h}")
+
+        def read_patch(left_level, top_level):
+            right = min(left_level + patch_size, img_w)
+            bottom = min(top_level + patch_size, img_h)
+            patch = pil_image.crop((left_level, top_level, right, bottom))
+            if patch.size != (patch_size, patch_size):
+                padded = Image.new("RGB", (patch_size, patch_size), (0, 0, 0))
+                padded.paste(patch, (0, 0))
+                patch = padded
+            return patch
+    else:
+        raise ValueError(
+            f"Unsupported image format '{ext}'. Supported formats: {sorted(SVS_EXTENSIONS | FLAT_IMAGE_EXTENSIONS)}"
+        )
     
     # Generate heatmap
-    # Note: We scan in level-specific pixel space but convert to level 0 for read_region
     heatmap = []
     with torch.no_grad():
         for row_idx, top_level in enumerate(tqdm(range(0, img_h, patch_size), desc="Processing rows")):
             row_probs = []
             for col_idx, left_level in enumerate(range(0, img_w, patch_size)):
-                # Convert level-specific coordinates to level 0 for OpenSlide
-                left_level0 = int(left_level * downsample)
-                top_level0 = int(top_level * downsample)
-                
-                # Read patch from slide (location in level 0, read at slide_level)
-                patch = slide.read_region((left_level0, top_level0), slide_level, (patch_size, patch_size)).convert("RGB")
+                patch = read_patch(left_level, top_level)
                 
                 if patch.size != (patch_size, patch_size):
                     row_probs.append(0.0)
@@ -75,7 +116,10 @@ def extract_top_k_patches(svs_path, slide_level, valid_bounds, k, backbone, chie
             
             heatmap.append(row_probs)
     
-    slide.close()
+    if slide is not None:
+        slide.close()
+    if pil_image is not None:
+        pil_image.close()
     heatmap = np.array(heatmap)
     
     # Get top K patches within valid bounds (valid_bounds are at slide_level)
@@ -178,11 +222,19 @@ def save_annotated_slide(svs_path, slide_level, top_k_patches, patch_size=224,
     Returns:
         str: Path to the saved annotated image
     """
-    # Load the slide and convert to image
-    slide = openslide.OpenSlide(svs_path)
-    width, height = slide.level_dimensions[slide_level]
-    slide_image = slide.read_region((0, 0), slide_level, (width, height)).convert("RGB")
-    slide.close()
+    # Load source image (SVS at level, or flat image directly)
+    if _is_svs_path(svs_path):
+        slide = openslide.OpenSlide(svs_path)
+        width, height = slide.level_dimensions[slide_level]
+        slide_image = slide.read_region((0, 0), slide_level, (width, height)).convert("RGB")
+        slide.close()
+    elif _is_flat_image_path(svs_path):
+        slide_image = Image.open(svs_path).convert("RGB")
+    else:
+        ext = _get_file_extension(svs_path)
+        raise ValueError(
+            f"Unsupported image format '{ext}'. Supported formats: {sorted(SVS_EXTENSIONS | FLAT_IMAGE_EXTENSIONS)}"
+        )
     
     # Draw rectangles on the image
     draw = ImageDraw.Draw(slide_image)
@@ -218,12 +270,21 @@ def save_slide_as_jpg(svs_path, slide_level, output_path=None):
     Returns:
         str: Path to the saved image
     """
-    slide = openslide.OpenSlide(svs_path)
-    width, height = slide.level_dimensions[slide_level]
-    print(f"Loading slide at level {slide_level}: {width}x{height}")
-    
-    slide_image = slide.read_region((0, 0), slide_level, (width, height)).convert("RGB")
-    slide.close()
+    if _is_svs_path(svs_path):
+        slide = openslide.OpenSlide(svs_path)
+        width, height = slide.level_dimensions[slide_level]
+        print(f"Loading SVS at level {slide_level}: {width}x{height}")
+        slide_image = slide.read_region((0, 0), slide_level, (width, height)).convert("RGB")
+        slide.close()
+    elif _is_flat_image_path(svs_path):
+        slide_image = Image.open(svs_path).convert("RGB")
+        width, height = slide_image.size
+        print(f"Loading flat image as level {slide_level}: {width}x{height}")
+    else:
+        ext = _get_file_extension(svs_path)
+        raise ValueError(
+            f"Unsupported image format '{ext}'. Supported formats: {sorted(SVS_EXTENSIONS | FLAT_IMAGE_EXTENSIONS)}"
+        )
     
     if output_path is None:
         base_name = os.path.splitext(os.path.basename(svs_path))[0]
@@ -240,7 +301,7 @@ def save_slide_as_jpg(svs_path, slide_level, output_path=None):
 if __name__ == "__main__":
     # Configuration
     print('yoyo')
-    IMG_PATH = "example_svs/19.svs"
+    IMG_PATH = "wsi_examples/19_level2.jpg"
     PATCH_SIZE = 224
     ANATOMICAL_LABEL = 1
     SLIDE_LEVEL = 2

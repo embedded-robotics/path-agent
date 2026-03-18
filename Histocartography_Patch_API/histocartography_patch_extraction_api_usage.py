@@ -1,6 +1,8 @@
 """
-Simple API usage example - Extract patches from SVS file
-Update the image path to match your file
+Simple API usage example.
+Supported input types: .svs, .jpg/.jpeg, .tif/.tiff, .png
+For .svs, set svs_level as needed.
+For flat images (.jpg/.tif/.png), svs_level is ignored.
 """
 
 import requests

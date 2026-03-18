@@ -1,6 +1,10 @@
 """
 Combined API Usage Example - Extract patches and process through CHIEF API
 Update the parameters to match your requirements
+
+Supported input types: .svs, .jpg/.jpeg, .tif/.tiff, .png
+For .svs, svs_level is used.
+For flat images (.jpg/.tif/.png), svs_level is ignored.
 """
 
 import requests
@@ -16,7 +20,7 @@ DEFAULT_SVS_IMAGE_PATH = str((Path(__file__).resolve().parents[1] / "svs_example
 # Request parameters
 payload = {
     "image_path": os.getenv("SVS_IMAGE_PATH", DEFAULT_SVS_IMAGE_PATH),
-    "svs_level": 2,                               # SVS level (same as slide_level for CHIEF)
+    "svs_level": 2,                               # Used only for .svs inputs
     "top_n": 3,                                   # Number of top patches to extract
     "save_patches": True,                         # Whether to save patches to disk
     "patch_size": 224,                            # Patch size for CHIEF processing
