@@ -15,18 +15,34 @@ class LlavaMedClient:
       LLMED_REPO  -> (real mode only) absolute path to cloned LLaVA-Med repo
       LLMED_MODEL -> (real mode only) HF id or local model path,
                      e.g. "microsoft/llava-med-v1.5-mistral-7b"
+      LLMED_CONV_MODE -> conversation template; defaults to "mistral_instruct"
+      LLMED_LOAD_8BIT -> "1" to request 8-bit load
+      LLMED_LOAD_4BIT -> "1" to request 4-bit load
     """
 
     def __init__(self, repo: str | None = None, model: str | None = None):
         # Even in stub mode we compute these, but only enforce them when USE_LLAVA=1
         self.repo = pathlib.Path(repo or os.environ.get("LLMED_REPO", "")).resolve()
         self.model = model or os.environ.get("LLMED_MODEL", "")
+        self.conv_mode = os.environ.get("LLMED_CONV_MODE", "mistral_instruct")
+        self.load_8bit = os.environ.get("LLMED_LOAD_8BIT", "0") == "1"
+        self.load_4bit = os.environ.get("LLMED_LOAD_4BIT", "0") == "1"
+        # Do not resolve the venv python symlink: resolving collapses it to the
+        # base interpreter and drops the virtualenv context.
+        self.python = pathlib.Path(
+            os.environ.get("LLMED_PYTHON", str(self.repo / ".venv" / "bin" / "python"))
+        )
 
         if USE_LLAVA:
             if not self.repo.exists():
                 raise RuntimeError(
                     "Real LLaVA mode enabled (USE_LLAVA=1) but LLMED_REPO "
                     "does not exist. Set LLMED_REPO to your LLaVA-Med repo path."
+                )
+            if not self.python.exists():
+                raise RuntimeError(
+                    "Real LLaVA mode enabled (USE_LLAVA=1) but LLMED_PYTHON "
+                    f"does not exist: {self.python}"
                 )
             if not self.model:
                 raise RuntimeError(
@@ -41,15 +57,33 @@ class LlavaMedClient:
         afile = str(pathlib.Path(answers_file).resolve())
 
         cmd = [
-            "python", "-m", "llava.eval.model_vqa",
+            str(self.python), "-m", "llava.eval.model_vqa",
             "--model-path", self.model,
+            "--conv-mode", self.conv_mode,
             "--question-file", qfile,
             "--image-folder", img_folder,
             "--answers-file", afile,
         ]
+        if self.load_8bit:
+            cmd.append("--load-8bit")
+        if self.load_4bit:
+            cmd.append("--load-4bit")
 
         # Run from inside the LLaVA-Med repo so `llava.*` imports work
-        subprocess.run(cmd, check=True, cwd=str(self.repo))
+        result = subprocess.run(
+            cmd,
+            check=False,
+            cwd=str(self.repo),
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                "LLaVA-Med command failed.\n"
+                f"CMD: {' '.join(cmd)}\n"
+                f"STDOUT:\n{result.stdout}\n"
+                f"STDERR:\n{result.stderr}"
+            )
 
 
     def ask_batch(self, question_jsonl: str, image_folder: str, out_jsonl: str) -> List[str]:

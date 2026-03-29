@@ -13,6 +13,7 @@ Notes:
 """
 from __future__ import annotations
 from typing import List, Dict, Any, Iterable, Tuple
+import base64
 import os, json
 import urllib.request
 import urllib.error
@@ -31,7 +32,6 @@ from pathrag.vision.crop import save_crops
 from pathrag.vlm.llava_med_client import LlavaMedClient
 
 from openai import OpenAI
-client = OpenAI()
 
 load_dotenv()
 logger = get_logger("pathrag.tools")
@@ -45,6 +45,10 @@ OUTPUT_ROOT = Path(os.getenv("OUTPUT_ROOT", "src/pathrag/pipeline/files"))
 (OUTPUT_ROOT / "query").mkdir(parents=True, exist_ok=True)
 
 _LAST_IMAGE_PATH: str | None = None
+
+
+def _get_openai_client() -> OpenAI:
+    return OpenAI()
 
 
 def _post_json(url: str, payload: dict, timeout: int = 1800) -> dict:
@@ -63,6 +67,32 @@ def _post_json(url: str, payload: dict, timeout: int = 1800) -> dict:
         raise RuntimeError(f"HTTP {e.code} from {url}: {detail}") from e
     except Exception as e:
         raise RuntimeError(f"Failed POST {url}: {e}") from e
+
+
+def _encode_image_base64(path: str) -> str:
+    return base64.b64encode(Path(path).read_bytes()).decode("utf-8")
+
+
+def _call_stage4_remote(endpoint: str, crop_path: str, prompt: str, extra: dict | None = None) -> str:
+    base_url = os.environ.get("PATHRAG_STAGE4_REMOTE_URL", "").rstrip("/")
+    if not base_url:
+        raise RuntimeError("PATHRAG_STAGE4_REMOTE_URL is not set")
+    payload = {
+        "image_b64": _encode_image_base64(crop_path),
+        "filename": Path(crop_path).name,
+        "prompt": prompt,
+    }
+    if extra:
+        payload.update(extra)
+    res = _post_json(
+        f"{base_url}/{endpoint.lstrip('/')}",
+        payload,
+        timeout=int(os.getenv("PATHRAG_HTTP_TIMEOUT", "1800")),
+    )
+    text = str(res.get("text", "")).strip()
+    if not text:
+        raise RuntimeError(f"Remote Stage 4 returned empty text from {endpoint}")
+    return text
 
 import subprocess
 from pathlib import Path
@@ -339,26 +369,36 @@ def _rows_for_patches(patch_image_paths, prompt):
         )
     return rows
 
-def roi_agent_describe(patch, question: str):
+def roi_agent_describe(patch, question: str, image_path: str | None = None):
     """
     REAL VLM call (LLaVA-Med): single-patch ROI description.
     Requires:
       - PATHRAG_IMAGE: path to the full image (or defaults to sample_he.png)
       - LLMED_REPO, LLMED_MODEL: see LlavaMedClient
     """
-    img_path = os.environ.get("PATHRAG_IMAGE", "sample_he.png")
+    img_path = image_path or os.environ.get("PATHRAG_IMAGE", "sample_he.png")
     crop_paths = save_crops(img_path, [patch.bbox], "artifacts/crops")
 
     prompt = (
-        f"Briefly describe this pathology ROI to help answer: {question}. "
-        "One sentence."
+        f"Question: {question}\n"
+        "Describe the dominant visible structure in this crop using only morphology. "
+        "State whether it looks more like a blood vessel, a duct or gland, or another structure, "
+        "and justify that with visible features such as wall thickness, lumen, lining, shape, and surrounding stroma. "
+        "A thick wall favors blood vessel over cystic space. "
+        "Do not call it cystic unless the wall is thin and the morphology clearly supports that interpretation. "
+        "Do not give a disease diagnosis.\n"
+        "Return exactly 1 short sentence."
     )
 
     qfile = Path("artifacts/query/roi.jsonl").resolve()
     afile = Path("artifacts/answer/roi.jsonl").resolve()
     _write_jsonl(_rows_for_patches(crop_paths, prompt), str(qfile))
+    crop_path = crop_paths[0]
 
     try:
+        if os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
+            text = _call_stage4_remote("describe_roi", crop_path, prompt)
+            return {"useful": True, "description": text}
         client = LlavaMedClient()
         texts = client.ask_batch(str(qfile), ".", str(afile))
         text = texts[0] if texts else f"[roi-fallback] {patch.id}"
@@ -366,25 +406,75 @@ def roi_agent_describe(patch, question: str):
     except Exception as e:
         return {"useful": False, "description": f"[roi-error] {e}"}
 
-def patch_agent_contribution(patch: Patch, question: str, full_captions: list[str]) -> str:
+def patch_agent_contribution(
+    patch: Patch,
+    question: str,
+    full_captions: list[str],
+    image_path: str | None = None,
+) -> str:
     """
     REAL VLM call (LLaVA-Med): explain contribution of this ROI to the answer.
     Returns a short sentence, used in Stage 5/7 fusion.
     """
-    img_path = os.environ.get("PATHRAG_IMAGE", "sample_he.png")
+    img_path = image_path or os.environ.get("PATHRAG_IMAGE", "sample_he.png")
     crop_paths = save_crops(img_path, [patch.bbox], "artifacts/crops")
 
-    cap = full_captions[0] if full_captions else "general pathology context"
-    prompt = (
-        f"In ONE sentence, explain how this ROI helps answer: '{question}'. "
-        f"Use this context: {cap}"
+    use_stage3_captions = os.getenv("PATHRAG_STAGE4_USE_CAPTIONS", "1").strip().lower() not in {
+        "0", "false", "no", "off"
+    }
+    cap = (full_captions[0] if (use_stage3_captions and full_captions) else "").strip()
+    if cap:
+        cap = cap[:240]
+
+    prompt_parts = [
+        f"Question: {question}",
+        "Decide whether the dominant structure in this crop is more consistent with a blood vessel, "
+        "a duct or gland, or is uncertain, using only visible morphology. "
+        "Use evidence such as wall thickness, lumen, lining, shape, and surrounding stroma. "
+        "Do not name a disease diagnosis.",
+    ]
+    if cap:
+        prompt_parts.append("Ignore the context if it is not visibly supported.")
+        prompt_parts.append(f"Context: {cap}")
+    prompt_parts.append(
+        "Return exactly 1 short sentence that starts with one of these labels: "
+        "Direct evidence:, Partial evidence:, or No useful evidence:. "
+        "If relevant, explicitly say whether the morphology favors blood vessel, duct or gland, or remains uncertain."
+    )
+    prompt = "\n".join(prompt_parts)
+    fallback_prompt = (
+        f"Question: {question}\n"
+        "Look only at this crop. State whether it provides direct evidence, partial evidence, or no useful evidence "
+        "for answering the question. Mention only visible morphology such as lumen, wall thickness, lining, shape, "
+        "and surrounding stroma, and say whether the structure favors blood vessel, duct or gland, or is uncertain. "
+        "Keep it to 1 short sentence.\n"
+        "Return exactly 1 short sentence starting with Direct evidence:, Partial evidence:, or No useful evidence:."
     )
 
     qfile = Path("artifacts/query/patch.jsonl").resolve()
     afile = Path("artifacts/answer/patch.jsonl").resolve()
     _write_jsonl(_rows_for_patches(crop_paths, prompt), str(qfile))
+    crop_path = crop_paths[0]
 
     try:
+        if os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
+            try:
+                return _call_stage4_remote(
+                    "patch_contribution",
+                    crop_path,
+                    prompt,
+                    extra={"question": question, "context": cap} if cap else {"question": question},
+                )
+            except RuntimeError as e:
+                if "empty text" not in str(e):
+                    raise
+                logger.warning(f"Remote patch_contribution returned empty text for {patch.id}; retrying with fallback prompt")
+                return _call_stage4_remote(
+                    "patch_contribution",
+                    crop_path,
+                    fallback_prompt,
+                    extra={"question": question},
+                )
         client = LlavaMedClient()
         texts = client.ask_batch(str(qfile), ".", str(afile))
         return texts[0] if texts else f"[patch-fallback] {patch.id} via {cap}"
@@ -620,7 +710,7 @@ def _call_gemmamed_for_critique(prompt: str, temperature: float = 0.2) -> str:
         {"role": "system", "content": "You are GemmaMed, a careful pathology VQA assistant."},
         {"role": "user", "content": prompt},
     ]
-    response = client.chat.completions.create(
+    response = _get_openai_client().chat.completions.create(
         model="gpt-4.1-mini",  # or your exact model name
         messages=messages,
         temperature=temperature,
@@ -759,6 +849,7 @@ def fuse_answer(
     question: str,
     label: str,
     chosen: list[tuple[Patch, str]],
+    full_captions: list[str] | None = None,
     mode: str = "answer",  # "answer" | "description"
 ) -> str:
     """
@@ -768,6 +859,7 @@ def fuse_answer(
       - question: original user question.
       - label: sub-pathology label (e.g., "scc").
       - chosen: list of (Patch, summary) after Stage 6 selection.
+      - full_captions: optional weak site-context hints from Stage 3.
       - mode: "answer" (VQA-style final answer) or "description" (findings-style text).
 
     Behavior:
@@ -788,6 +880,8 @@ def fuse_answer(
     for patch, summary in chosen:
         evidence_lines.append(f"[PATCH_ID={patch.id}] {summary}")
     evidence_block = "\n".join(evidence_lines)
+    context_lines = [c.strip() for c in (full_captions or []) if str(c).strip()]
+    context_block = "\n".join(f"- {c}" for c in context_lines[:5]) if context_lines else "(none)"
 
     # Adjust the “task” based on Path-RAG's (answer) vs (description) variants.
     if mode == "description":
@@ -816,19 +910,25 @@ Question:
 Sub-pathology label:
 {label}
 
+Weak site-context hints:
+{context_block}
+
 Evidence from selected patches:
 {evidence_block}
 
 Instructions:
-- Base your reasoning strictly on the evidence and label above.
+- Treat the selected patch evidence as the primary source of truth.
+- Treat the sub-pathology label and site-context hints as weak background context only.
+- If the label or hints conflict with visible morphology from the patches, ignore the label or hints.
 - Do NOT invent findings that are not supported by the patches.
 - If evidence is conflicting or incomplete, acknowledge that.
+- Prefer naming visible structures over proposing disease labels when the morphology does not justify a diagnosis.
 - Respond in clear, clinical language in one or two paragraphs.
 """.strip()
 
     try:
         # Call a GPT-4-class model (pick whatever you are using: gpt-4o, gpt-4.1, etc.)
-        response = client.chat.completions.create(
+        response = _get_openai_client().chat.completions.create(
             model="gpt-4o",  # <--- change this to your preferred GPT model
             messages=[
                 {"role": "system", "content": "You are a careful medical AI assistant and expert pathologist."},

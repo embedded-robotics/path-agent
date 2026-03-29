@@ -1,0 +1,38 @@
+{
+  "answers": [
+    {
+      "case_id": "07_level2",
+      "question_id": 1,
+      "category": "position_independent",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "question": "What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?",
+      "expected_answer": "These are blood vessels, specifically a dense network of muscular arteries and thick-walled veins.",
+      "patch_count": 5,
+      "model_answer": "Based on the evidence from the selected patches, the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most consistent with blood vessels. Each patch (CP0, CP3, and CP2) describes structures with thick walls and clear lumens, which are characteristic features of blood vessels rather than ductal or glandular spaces. The presence of a thick wall is a key distinguishing feature that supports the identification of these structures as blood vessels, as opposed to ducts or glands, which typically have thinner walls and different lining characteristics. Therefore, the evidence from the patches supports the conclusion that these structures are blood vessels.",
+      "subpath_label": "breast",
+      "full_captions": [
+        "Breast tissue may contain ducts, lobules, adipose tissue, fibrous stroma, and blood vessels.",
+        "Distinguish vascular lumens from ductal or glandular spaces by wall thickness, lining, and surrounding stroma."
+      ],
+      "chosen_idx": [
+        0,
+        3,
+        2
+      ],
+      "patch_summaries": [
+        "Direct evidence: The dominant structure in this crop is more consistent with a blood vessel, as it has a thick wall and a clear lumen.",
+        "Direct evidence: The dominant structure in this crop is more consistent with a blood vessel, as evidenced by its wall thickness, lumen, lining, shape, and surrounding stroma.",
+        "Direct evidence: The dominant structure in this crop is more consistent with a blood vessel, as evidenced by its thick wall and clear lumen.",
+        "Direct evidence: The dominant structure in this crop is more consistent with a blood vessel, as it has a thick wall and a clear lumen.",
+        "Direct evidence: The dominant structure in this crop is more consistent with a blood vessel, as evidenced by its wall thickness, lumen, lining, shape, and surrounding stroma."
+      ],
+      "roi_desc": [
+        "The dominant visible structure in this crop appears to be a blood vessel.",
+        "The dominant visible structure in this crop appears to be a blood vessel, as it has a thick wall and a clear or collapsed lumen.",
+        "The dominant visible structure in this crop appears to be a blood vessel.",
+        "The dominant visible structure in this crop appears to be a blood vessel.",
+        "The dominant visible structure in this crop appears to be a blood vessel."
+      ]
+    }
+  ]
+}

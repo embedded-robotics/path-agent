@@ -1,27 +1,27 @@
 head_neck:
-  - "Keratin pearls and intercellular bridges are characteristic in squamous lesions."
-  - "Head and neck SCC often shows keratinization and nests."
+  - "Head and neck tissue may show squamous mucosa, salivary structures, lymphoid tissue, vessels, and fibrous stroma."
+  - "Prioritize visible architecture and cytology before inferring lesion type."
 breast:
-  - "Ductal structures and desmoplastic stroma may indicate IDC."
-  - "ER/PR/HER2 markers drive subtyping."
+  - "Breast tissue may contain ducts, lobules, adipose tissue, fibrous stroma, and blood vessels."
+  - "Distinguish vascular lumens from ductal or glandular spaces by wall thickness, lining, and surrounding stroma."
 skin:
-  - "Epidermal maturation, keratinization; consider SCC vs BCC."
+  - "Skin may show epidermis, adnexal structures, dermis, vessels, inflammation, and keratinization."
 # … add 1–2 bullets for each label you care about now
 lung:
-  - "Glandular differentiation suggests adenocarcinoma."
-  - "Keratinization and intercellular bridges suggest SCC."
+  - "Lung tissue may show alveolar spaces, bronchiolar epithelium, vessels, inflammation, and fibrosis."
+  - "Describe visible architecture first before assigning a tumor subtype."
 gastrointestinal:
-  - "Gland formation and mucin production are key features."
-  - "Signet ring cells may indicate aggressive behavior."
+  - "Gastrointestinal tissue may show glands, mucosa, muscularis, lamina propria, vessels, and mucin."
+  - "Separate native glandular architecture from vascular or stromal structures using visible morphology."
 genitourinary:
-  - "Papillary structures and clear cells are common in renal cell carcinoma."
-  - "Glandular patterns may suggest adenocarcinoma."
+  - "Genitourinary tissue may contain tubules, papillary structures, smooth muscle, vessels, and stromal elements."
+  - "Use only visible morphology when deciding whether a structure is epithelial, stromal, or vascular."
 gynecologic:
-  - "Squamous differentiation and keratinization are common in cervical SCC."
-  - "Glandular patterns may indicate adenocarcinoma."
+  - "Gynecologic tissue may show squamous epithelium, glandular epithelium, smooth muscle, stroma, and vessels."
+  - "Base interpretation on architecture and cytology that are directly visible in the crop."
 soft_tissue:
-  - "Spindle cell morphology and myxoid stroma are notable."
-  - "Rhabdomyoblastic differentiation may indicate rhabdomyosarcoma."
+  - "Soft tissue may show spindle cells, collagen, myxoid matrix, adipose tissue, vessels, and inflammation."
+  - "Assess whether the dominant pattern is stromal, vascular, inflammatory, or cellular before naming entities."
 hematolymphoid:
-  - "Diffuse infiltration of atypical lymphocytes is characteristic."
-  - "Hodgkin lymphoma shows Reed-Sternberg cells."
+  - "Hematolymphoid tissue may show sheets of lymphoid cells, mixed inflammation, sinuses, vessels, and stromal fragments."
+  - "Describe cell distribution and background features before inferring a specific lymphoid diagnosis."

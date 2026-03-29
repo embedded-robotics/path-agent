@@ -134,6 +134,11 @@ def n_tile_and_rank(state: PathRAGState) -> PathRAGState:
       - tiles, hc_rank, cheif_rank are populated (lists of Patch-as-dict)
       - patches contains fused Top-K consensus (Patch-as-dict, len == top_k)
     """
+    # Skip if patches already provided (e.g., from evaluation results)
+    if "patches" in state and state["patches"]:
+        logger.info("Skipping Stage 1-2: using pre-computed patches")
+        return state
+
     logger.info("Stage 1–2 start")
     tiles = tile_image(state["image_path"])
     hc = histocartography_rank(state["image_path"], tiles)
@@ -184,11 +189,16 @@ def n_roi_and_patch_agents(state: PathRAGState) -> PathRAGState:
     roi_useful, roi_desc, patch_summ = [], [], []
 
     for p in patches:
-        roi = roi_agent_describe(p, state["question"])
+        roi = roi_agent_describe(p, state["question"], image_path=state["image_path"])
         roi_useful.append(bool(roi["useful"]))
         roi_desc.append(str(roi["description"]))
         patch_summ.append(
-            patch_agent_contribution(p, state["question"], state["full_captions"])
+            patch_agent_contribution(
+                p,
+                state["question"],
+                state["full_captions"],
+                image_path=state["image_path"],
+            )
         )
 
     state["roi_useful"] = roi_useful
@@ -258,7 +268,11 @@ def n_fuse(state: PathRAGState) -> PathRAGState:
     patches = [Patch(**p) for p in state["patches"]]
     chosen = [(patches[i], state["patch_summaries"][i]) for i in state["chosen_idx"]]
     state["final_answer"] = fuse_answer(
-        state["question"], state["subpath_label"], chosen, mode=state["mode"]
+        state["question"],
+        state["subpath_label"],
+        chosen,
+        full_captions=state["full_captions"],
+        mode=state["mode"],
     )
     logger.info("Stage 7 done")
     return state
