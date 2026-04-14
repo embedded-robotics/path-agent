@@ -30,6 +30,7 @@ import os, json
 from pathlib import Path
 from pathrag.vision.crop import save_crops
 from pathrag.vlm.llava_med_client import LlavaMedClient
+from pathrag.vlm.medgemma_client import MedGemmaClient
 
 from openai import OpenAI
 
@@ -94,11 +95,29 @@ def _call_stage4_remote(endpoint: str, crop_path: str, prompt: str, extra: dict 
         raise RuntimeError(f"Remote Stage 4 returned empty text from {endpoint}")
     return text
 
+
+def _get_stage4_backend() -> str:
+    return os.environ.get("PATHRAG_STAGE4_BACKEND", "llava-med").strip().lower()
+
+
+def _get_stage4_client():
+    backend = _get_stage4_backend()
+    if backend == "medgemma":
+        return MedGemmaClient()
+    if backend == "llava-med":
+        return LlavaMedClient()
+    raise RuntimeError(
+        "Unsupported PATHRAG_STAGE4_BACKEND. "
+        "Expected 'llava-med' or 'medgemma'."
+    )
+
 import subprocess
 from pathlib import Path
 
 def _run_medgemma(question: str, captions: list[str], tool_dir: str | None = None) -> str:
-    tool = Path(tool_dir or os.environ.get("MEDGEMMA_TOOL_DIR", "tools/medgemma")).resolve()
+    tool = Path(
+        tool_dir or os.environ.get("MEDGEMMA_TOOL_DIR", "pathrag-agentic-starter/tools/medgemma")
+    ).resolve()
     py   = tool / ".venv/bin/python"
     cfg  = tool / "config/default.yaml"
     out  = tool / "artifacts/answer/out.json"
@@ -396,10 +415,10 @@ def roi_agent_describe(patch, question: str, image_path: str | None = None):
     crop_path = crop_paths[0]
 
     try:
-        if os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
+        if _get_stage4_backend() == "llava-med" and os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
             text = _call_stage4_remote("describe_roi", crop_path, prompt)
             return {"useful": True, "description": text}
-        client = LlavaMedClient()
+        client = _get_stage4_client()
         texts = client.ask_batch(str(qfile), ".", str(afile))
         text = texts[0] if texts else f"[roi-fallback] {patch.id}"
         return {"useful": True, "description": text}
@@ -457,7 +476,7 @@ def patch_agent_contribution(
     crop_path = crop_paths[0]
 
     try:
-        if os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
+        if _get_stage4_backend() == "llava-med" and os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
             try:
                 return _call_stage4_remote(
                     "patch_contribution",
@@ -475,7 +494,7 @@ def patch_agent_contribution(
                     fallback_prompt,
                     extra={"question": question},
                 )
-        client = LlavaMedClient()
+        client = _get_stage4_client()
         texts = client.ask_batch(str(qfile), ".", str(afile))
         return texts[0] if texts else f"[patch-fallback] {patch.id} via {cap}"
     except Exception as e:

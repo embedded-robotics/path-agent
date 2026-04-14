@@ -9,6 +9,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STARTER_ROOT = REPO_ROOT / "pathrag-agentic-starter"
 STARTER_SRC = STARTER_ROOT / "src"
+LAUNCH_CWD = Path.cwd()
 if str(STARTER_SRC) not in sys.path:
     sys.path.insert(0, str(STARTER_SRC))
 
@@ -104,8 +105,12 @@ def main() -> None:
     parser.add_argument("--max-rounds", type=int, default=1, help="Critique rounds")
     args = parser.parse_args()
 
-    sheet_path = Path(args.sheet).resolve()
-    out_path = Path(args.out).resolve()
+    sheet_arg = Path(args.sheet)
+    out_arg = Path(args.out)
+    sheet_path = sheet_arg if sheet_arg.is_absolute() else (LAUNCH_CWD / sheet_arg)
+    out_path = out_arg if out_arg.is_absolute() else (LAUNCH_CWD / out_arg)
+    sheet_path = sheet_path.resolve()
+    out_path = out_path.resolve()
     sheet = load_json(sheet_path)
     rows = sheet.get("questions", [])
     if args.case_id:

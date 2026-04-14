@@ -7,7 +7,11 @@ A GitHub-ready, minimal starter for building an **agentic architecture** around 
 
 This repo ships with:
 - A clean Python package layout (`src/`).
-- Mock **tools** that simulate HistoCartography, LLaVA-Med, critique/re-rank/fusion, and a text **reasoner**.
+- Tool adapters for:
+  - CHIEF / combined patch extraction over HTTP
+  - Stage 3 local caption bank or retriever API
+  - Stage 4 backend selection between local `medgemma` and `llava-med`
+  - Stage 5 / Stage 7 OpenAI critique and fusion
 - Two runnable templates:
   - `scripts/run_langgraph.py`
   - `scripts/run_autogen.py`
@@ -67,6 +71,44 @@ export PATHRAG_RETRIEVER_API_URL=http://localhost:8000/retrieve_captions
 python scripts/run_langgraph.py
 ```
 
+### Stage 4 backends
+
+Stage 4 can now run with either a local MedGemma backend or an LLaVA-Med backend.
+
+#### Local MedGemma
+
+Use this when you want a fully local fallback:
+
+```bash
+export PATHRAG_STAGE4_BACKEND=medgemma
+unset PATHRAG_STAGE4_REMOTE_URL
+export MEDGEMMA_TOOL_DIR=/home/sina/projects/path-agent/pathrag-agentic-starter/tools/medgemma
+```
+
+Notes:
+- the MedGemma tool lives under `tools/medgemma`
+- it uses its own `.venv`
+- current default model is `google/medgemma-4b-it`
+
+#### Remote LLaVA-Med
+
+Use this when you have a stronger GPU machine or Colab serving LLaVA-Med:
+
+```bash
+export PATHRAG_STAGE4_BACKEND=llava-med
+export PATHRAG_STAGE4_REMOTE_URL=https://YOUR-STAGE4-ENDPOINT
+```
+
+Notes:
+- remote LLaVA-Med is currently the stronger Stage 4 backend on the tested Imroze case
+- local 12 GB GPUs were not reliable for `microsoft/llava-med-v1.5-mistral-7b` fp16 loading
+- the remote endpoint is expected to expose:
+  - `POST /describe_roi`
+  - `POST /patch_contribution`
+
+Colab notebook used for the remote LLaVA-Med path:
+- https://colab.research.google.com/drive/18UIsFA5Bq4qYgT1ZY-t85PUfIXE6Eqpq#scrollTo=ERx7apvRyF4W
+
 ### Service env knobs
 
 - `PATHRAG_USE_COMBINED_API`: `1` to use external patch extraction + CHIEF flow.
@@ -74,6 +116,10 @@ python scripts/run_langgraph.py
 - `PATHRAG_USE_RETRIEVER_API`: `1` to use external caption retriever.
 - `PATHRAG_RETRIEVER_API_URL`: Retriever API endpoint.
 - `PATHRAG_HTTP_TIMEOUT`: HTTP timeout (seconds, default `1800` for Combined API calls).
+- `PATHRAG_STAGE4_BACKEND`: `llava-med` or `medgemma`
+- `PATHRAG_STAGE4_REMOTE_URL`: remote Stage 4 base URL for LLaVA-Med
+- `PATHRAG_STAGE4_USE_CAPTIONS`: `0` disables Stage 3 captions inside Stage 4 prompts
+- `MEDGEMMA_TOOL_DIR`: path to the local MedGemma tool directory
 
 ---
 
@@ -122,7 +168,11 @@ The LangGraph app wires the full 7-stage Path-RAG pipeline:
 3. **Stage 4 — ROI & patch agents**  
    - For each of the K patches:  
      - An ROI agent decides if the patch is useful and explains *why*.  
-     - A patch contribution agent produces a short summary (`patch_summaries[i]`) conditioned on the question + retrieved captions.   
+     - A patch contribution agent produces a short summary (`patch_summaries[i]`) conditioned on the question and the selected Stage 4 backend.  
+   - Backend options:
+     - `llava-med`: local or remote LLaVA-Med
+     - `medgemma`: local MedGemma tool
+   - Stage 3 captions can be disabled for Stage 4 via `PATHRAG_STAGE4_USE_CAPTIONS=0`.   
 
 4. **Stage 5 — critique loop**  
    - A critique node refines the patch summaries once per loop iteration.  
@@ -141,8 +191,10 @@ The LangGraph app wires the full 7-stage Path-RAG pipeline:
    - Combines:
      - the question,
      - the sub-pathology label,
+     - the retrieved Stage 3 captions as weak context,
      - the selected patches (`chosen_idx` + their summaries),
-   - and produces `final_answer`. :contentReference[oaicite:8]{index=8}  
+   - and produces `final_answer`.
+   - Current prompt design treats visible patch evidence as primary and Stage 3 context as secondary. :contentReference[oaicite:8]{index=8}  
 
 ### Key state fields
 
@@ -184,6 +236,46 @@ for step in app.stream(init_state, config={"configurable": {"thread_id": "demo-1
     final_step = step
 
 print(final_step["fuse"]["final_answer"])
+```
+
+## Evaluation runner
+
+There is a dedicated evaluation runner for the Imroze sheet that reuses saved CHIEF patch coordinates and starts from Stage 3 onward:
+
+```bash
+cd /home/sina/projects/path-agent
+
+export PATHRAG_STAGE4_BACKEND=llava-med
+export PATHRAG_STAGE4_REMOTE_URL=https://YOUR-STAGE4-ENDPOINT
+export OPENAI_API_KEY=...
+
+pathrag-agentic-starter/.venv/bin/python evaluation/run_imroze_langgraph_eval.py \
+  --case-id 07_level2 \
+  --question-id 1 \
+  --out pathrag-agentic-starter/evaluation/imroze_langgraph_smoke_real.json
+```
+
+Local MedGemma variant:
+
+```bash
+cd /home/sina/projects/path-agent
+
+export PATHRAG_STAGE4_BACKEND=medgemma
+unset PATHRAG_STAGE4_REMOTE_URL
+export MEDGEMMA_TOOL_DIR=/home/sina/projects/path-agent/pathrag-agentic-starter/tools/medgemma
+export OPENAI_API_KEY=...
+
+pathrag-agentic-starter/.venv/bin/python evaluation/run_imroze_langgraph_eval.py \
+  --case-id 07_level2 \
+  --question-id 1 \
+  --out pathrag-agentic-starter/evaluation/imroze_langgraph_smoke_medgemma.json
+```
+
+Notes:
+- the runner changes into `pathrag-agentic-starter` internally to import the app
+- relative `--sheet` and `--out` paths are now resolved from the shell launch directory
+- current tested quality result:
+  - remote `llava-med` outperforms local `medgemma` on the current Imroze smoke case
 
 ---
 

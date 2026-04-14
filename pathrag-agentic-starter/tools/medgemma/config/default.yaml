@@ -1,0 +1,14 @@
+env:
+  cache_dir: "~/.cache/huggingface"
+
+models:
+  medgemma_repo: "google/medgemma-4b-it"
+
+generation:
+  max_new_tokens: 160
+  temperature: 0.0
+
+stage4:
+  output_dir: "artifacts"
+  smoke_answers_path: "artifacts/answer/smoke.jsonl"
+  last_run_path: "artifacts/last_run.json"
