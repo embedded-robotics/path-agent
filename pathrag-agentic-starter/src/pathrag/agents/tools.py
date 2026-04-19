@@ -20,6 +20,7 @@ import urllib.error
 from dataclasses import dataclass
 from pathlib import Path
 from PIL import Image
+import numpy as np
 from dotenv import load_dotenv
 from pathrag.utils.logging import get_logger
 
@@ -28,6 +29,8 @@ from pathrag.retrieval.store import captions_for_label
 
 import os, json
 from pathlib import Path
+from pathrag.vision.chief_client import ChiefClient
+from pathrag.vision.hc_client import HistocartographyClient
 from pathrag.vision.crop import save_crops
 from pathrag.vlm.llava_med_client import LlavaMedClient
 from pathrag.vlm.medgemma_client import MedGemmaClient
@@ -39,8 +42,9 @@ logger = get_logger("pathrag.tools")
 
 NUCLEI_THRESHOLD = 5
 GRID_SIZE = 3
-OVERLAP = 0.20
 DEFAULT_TOP_K = 3
+FLAT_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
+SVS_EXTENSIONS = {".svs"}
 
 OUTPUT_ROOT = Path(os.getenv("OUTPUT_ROOT", "src/pathrag/pipeline/files"))
 (OUTPUT_ROOT / "query").mkdir(parents=True, exist_ok=True)
@@ -144,6 +148,56 @@ def _run_medgemma(question: str, captions: list[str], tool_dir: str | None = Non
     return json.loads(out.read_text()).get("answer", "").strip()
 
 
+def _default_valid_bounds() -> list[list[int]]:
+    """
+    Placeholder valid-bounds provider.
+
+    This preserves the example-style CHIEF contract used by Imroze when HC
+    cannot provide selected patches. Replace this once the real HC/outer
+    bounds provider lands.
+    """
+    raw = os.environ.get("CHIEF_VALID_BOUNDS_JSON", "").strip()
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list) and parsed:
+                return parsed
+        except Exception as e:
+            logger.warning(f"Ignoring CHIEF_VALID_BOUNDS_JSON override: {e}")
+    return [[0, 600, 1600, 1000]]
+
+
+def _image_ext(path: str) -> str:
+    return Path(path).suffix.lower()
+
+
+def _get_image_size(image_path: str) -> tuple[int, int]:
+    ext = _image_ext(image_path)
+    if ext in FLAT_IMAGE_EXTENSIONS:
+        with Image.open(image_path) as img:
+            return img.size
+    if ext in SVS_EXTENSIONS:
+        try:
+            import openslide  # type: ignore
+        except Exception as e:  # pragma: no cover - depends on runtime env
+            raise RuntimeError(
+                "openslide-python is required in the main orchestrator env for SVS tiling/ranking"
+            ) from e
+        level = int(os.getenv("PATHRAG_SVS_LEVEL", "2"))
+        slide = openslide.OpenSlide(image_path)
+        try:
+            return slide.level_dimensions[level]
+        finally:
+            slide.close()
+    raise RuntimeError(f"Unsupported image extension for tiling/ranking: {ext}")
+
+
+def _patches_to_valid_bounds(patches: List["Patch"]) -> list[list[int]]:
+    if patches:
+        return [[int(x1), int(y1), int(x2), int(y2)] for x1, y1, x2, y2 in (p.bbox for p in patches)]
+    return _default_valid_bounds()
+
+
 # Lightweight Patch dataclass used throughout the graph. Kept minimal so callers
 # can construct via Patch(**p) when p is a dict coming from state.
 @dataclass
@@ -156,161 +210,136 @@ class Patch:
 # STAGE 1: TILING + HC RANK
 # =========================
 def tile_image(image_path: str, tile_size: int = 224) -> List[Patch]:
-    """Split the input image into a regular grid of tiles (no GPU required).
+    """Split the input image into the same uniform 3x3 grid used by Imroze's HC API.
 
     Design:
       - Keeps IDs deterministic (P0, P1, …) based on scan order.
-      - Does NOT load image pixels here if you already have a tiler upstream; feel free to replace
-        with your WSI tiler (OpenSlide, tifffile) that yields (bbox) without loading full image.
+      - Mirrors `Complete_Patch_Extraction_API.extract_patches(...)`, which scores
+        a fixed 3x3 grid and promotes the top nuclei-dense regions into `valid_bounds`
+        for CHIEF.
 
     Args:
         image_path: Path to the WSI or large image.
-        tile_size: Width/height of square tiles (pixels).
-        stride: Optional stride; if None, defaults to tile_size (no overlap).
-                Use a smaller stride (< tile_size) to introduce overlap.
+        tile_size: Unused here; retained to keep the public function signature stable.
 
     Returns:
-        A dense list of Patch with zero scores (to be ranked in the next step).
+        A 3x3 list of Patch with zero scores (to be ranked in the next step).
     """
     global _LAST_IMAGE_PATH
     _LAST_IMAGE_PATH = image_path
-    # TODO (real impl):
-    #   - Use OpenSlide/pyvips/tifffile to stream tiles without loading the full WSI.
-    #   - Compute (W, H) from image metadata; iterate y,x over range(0, H, stride).
-    # MOCK (minimal): return 9 tiles of 224×224 from the top-left quadrant
+    width, height = _get_image_size(image_path)
     tiles: List[Patch] = []
     k = 0
-    grid = 3  # 3×3 as a lightweight demo
-    step = tile_size
-    for i in range(grid):
-        for j in range(grid):
-            bbox = (j*step, i*step, j*step + tile_size, i*step + tile_size)
+    width_range = np.linspace(0, width, GRID_SIZE + 1, dtype=int)
+    height_range = np.linspace(0, height, GRID_SIZE + 1, dtype=int)
+    for i in range(GRID_SIZE):
+        for j in range(GRID_SIZE):
+            bbox = (
+                int(width_range[i]),
+                int(height_range[j]),
+                int(width_range[i + 1]),
+                int(height_range[j + 1]),
+            )
             tiles.append(Patch(id=f"P{k}", bbox=bbox, score=0.0))
             k += 1
     logger.info(f"Tiled image {image_path} into {len(tiles)} patches.")
     return tiles
 
 
-def histocartography_rank(image_path: str, patches: List[Patch]) -> List[Patch]:
-    """Rank patches by a HistoCartography-derived proxy (e.g., nuclei density).
+def histocartography_rank(image_path: str, patches: List[Patch], top_n: int = DEFAULT_TOP_K) -> List[Patch]:
+    """Run the local HC extraction logic and return selected+non-selected patches in score order.
 
     Contract:
-      - SAME length/order as input is NOT required; we return a sorted list (desc by score).
-      - Score meaning: larger == more informative (for H&E).
-
-    Replace this mock with:
-      - Your nuclei segmentation + counting per patch, or
-      - Any HC embedding → importance scorer (e.g., graph centrality).
+      - Same length as input is not required.
+      - Selected patches are returned first, followed by non-selected patches.
+      - Score meaning: nuclei count inside each 3x3 grid cell.
 
     Args:
-        image_path: Path to image (used if you crop & analyze pixels here).
-        patches: Dense grid from `tile_image`.
+        image_path: Path to image.
+        patches: Fixed 3x3 grid from `tile_image` (kept for state stability).
 
     Returns:
         New list of Patch with `.score` filled, sorted descending by score.
     """
-    # TODO (real impl):
-    #   for p in patches:
-    #       crop = read_crop(image_path, p.bbox)
-    #       score = nuclei_count(crop) or nuclei_density(crop)
-    #       out.append(Patch(p.id, p.bbox, float(score)))
-    # MOCK: monotonically decreasing scores
+    result = HistocartographyClient().extract_top_patches(
+        image_path=image_path,
+        top_n=max(1, min(int(top_n), len(patches) if patches else GRID_SIZE * GRID_SIZE)),
+    )
     ranked: List[Patch] = []
-    for i, p in enumerate(patches):
-        ranked.append(Patch(id=p.id, bbox=p.bbox, score=1.0 - 0.05 * i))
-    ranked.sort(key=lambda q: q.score, reverse=True)
-    logger.info(f"Ranked {len(ranked)} patches by HistoCartography proxy.")
+    selected = result.get("selected_patches", [])
+    non_selected = result.get("non_selected_patches", [])
+
+    for patch_index, patch in enumerate(selected):
+        ranked.append(
+            Patch(
+                id=f"P{patch_index}",
+                bbox=(int(patch["x1"]), int(patch["y1"]), int(patch["x2"]), int(patch["y2"])),
+                score=float(patch.get("nuclei_count", 0)),
+            )
+        )
+    offset = len(ranked)
+    for patch_index, patch in enumerate(non_selected, start=offset):
+        ranked.append(
+            Patch(
+                id=f"P{patch_index}",
+                bbox=(int(patch["x1"]), int(patch["y1"]), int(patch["x2"]), int(patch["y2"])),
+                score=float(patch.get("nuclei_count", 0)),
+            )
+        )
+
+    logger.info(
+        f"Ranked {len(ranked)} patches by local histocartography "
+        f"(selected={len(selected)}, non_selected={len(non_selected)})."
+    )
     return ranked
 
 # ==============================
 # STAGE 2: CHEIF + COMMON PATCH
 # ==============================
-def cheif_rank(image_path: str, patches: List[Patch]) -> List[Patch]:
-    """Rank patches by CHEIF attention (foundation model signal).
-
-    Replace this mock with:
-      - A call to your CHEIF model to produce per-patch attentions/saliency.
-      - Normalize scores to [0,1] if you mix with other sources.
-
-    Returns:
-        List[Patch] sorted descending by attention score.
-    """
-    # TODO (real impl):
-    #   att = cheif_attention(image_path, [p.bbox for p in patches]) -> List[float]
-    #   return sorted([Patch(p.id, p.bbox, att[i]) ...], key=lambda x: x.score, reverse=True)
+def cheif_rank(
+    image_path: str,
+    valid_bounds: list[list[int]],
+    top_k: int = DEFAULT_TOP_K,
+) -> List[Patch]:
+    """Run CHIEF inside HC-selected valid bounds and return final top-k patches."""
+    result = ChiefClient().extract_top_k_patches(
+        image_path=image_path,
+        top_k=top_k,
+        valid_bounds=valid_bounds,
+    )
     ranked: List[Patch] = []
-    for i, p in enumerate(patches):
-        ranked.append(Patch(id=p.id, bbox=p.bbox, score=1.0 - 0.03 * i))
-    ranked.sort(key=lambda q: q.score, reverse=True)
+    for i, patch in enumerate(result.get("top_k_patches", [])):
+        ranked.append(
+            Patch(
+                id=f"CP{i}",
+                bbox=(
+                    int(patch["x1"]),
+                    int(patch["y1"]),
+                    int(patch["x2"]),
+                    int(patch["y2"]),
+                ),
+                score=float(top_k - i),
+            )
+        )
     return ranked
 
 
-def common_patches(hc: List[Patch], cheif: List[Patch], top_k: int = 6) -> List[Patch]:
-    """Intersect/merge HC and CHEIF rankings into a consensus Top-K.
-
-    Strategy (simple & effective):
-      1) Take a wider band from each list (e.g., 2×top_k) to avoid missing near-misses.
-      2) Merge by patch.id, accumulate scores from both sources.
-      3) Aggregate scores (mean) → sort desc → take Top-K.
-
-    Notes:
-      - If HC/CHEIF disagree on bbox (shouldn’t if tiling is shared), prefer the first occurrence.
-      - You can switch to rank-based fusion (e.g., Borda count) if score scales differ a lot.
-
-    Args:
-        hc: HC-ranked patches (desc by HC score).
-        cheif: CHEIF-ranked patches (desc by attention).
-        top_k: Output size after fusion.
+def common_patches(image_path: str, hc: List[Patch], top_k: int = DEFAULT_TOP_K) -> tuple[List[Patch], List[Patch]]:
+    """Mirror Imroze's combined API: HC-selected patches become valid bounds for CHIEF.
 
     Returns:
-        Top-K fused Patch list (desc by aggregated score).
+        tuple of:
+          - final CHIEF patches
+          - CHIEF-ranked patches (same as final list today, kept explicit for state/logging)
     """
-    use_combined_api = os.getenv("PATHRAG_USE_COMBINED_API", "0") == "1"
-    combined_api_url = os.getenv("PATHRAG_COMBINED_API_URL", "http://localhost:8003/process")
-    if use_combined_api and _LAST_IMAGE_PATH and str(_LAST_IMAGE_PATH).lower().endswith(".svs"):
-        try:
-            payload = {
-                "image_path": _LAST_IMAGE_PATH,
-                "svs_level": int(os.getenv("PATHRAG_SVS_LEVEL", "2")),
-                "top_n": top_k,
-                "save_patches": False,
-                "patch_size": int(os.getenv("PATHRAG_PATCH_SIZE", "224")),
-                "anatomical_label": int(os.getenv("PATHRAG_ANATOMICAL_LABEL", "1")),
-                "top_k": top_k,
-            }
-            res = _post_json(combined_api_url, payload, timeout=int(os.getenv("PATHRAG_HTTP_TIMEOUT", "1800")))
-            chief = (res.get("chief_response") or {}).get("top_k_patches") or []
-            if chief:
-                out: List[Patch] = []
-                for i, p in enumerate(chief):
-                    bbox = (int(p["x1"]), int(p["y1"]), int(p["x2"]), int(p["y2"]))
-                    out.append(Patch(id=f"CP{i}", bbox=bbox, score=float(len(chief) - i)))
-                logger.info(f"Used Combined API patches (k={len(out)})")
-                return out[:top_k]
-        except Exception as e:
-            logger.warning(f"Combined API fallback to local fusion: {e}")
-
-    band = top_k * 2
-    by_id: Dict[str, Tuple[Tuple[int,int,int,int], List[float]]] = {}
-
-    def add(lst: List[Patch]):
-        for p in lst[:band]:
-            if p.id not in by_id:
-                by_id[p.id] = (p.bbox, [p.score])
-            else:
-                by_id[p.id][1].append(p.score)
-
-    add(hc)
-    add(cheif)
-
-    fused: List[Patch] = []
-    for pid, (bbox, scores) in by_id.items():
-        avg = sum(scores) / len(scores)   # simple average of available scores
-        fused.append(Patch(id=pid, bbox=bbox, score=avg))
-
-    fused.sort(key=lambda q: q.score, reverse=True)
-    logger.info(f"Fused {len(fused)} patches from HC and CHEIF into Top-{top_k}.")
-    return fused[:top_k]
+    hc_selected = hc[:top_k]
+    valid_bounds = _patches_to_valid_bounds(hc_selected)
+    chief = cheif_rank(image_path=image_path, valid_bounds=valid_bounds, top_k=top_k)
+    logger.info(
+        "Stage 1–2 sequential handoff: "
+        f"{len(hc_selected)} HC patches -> {len(valid_bounds)} valid bounds -> {len(chief)} CHIEF patches"
+    )
+    return chief, chief
 
 # ===============================
 # STAGE 3: LABELING + RETRIEVAL
@@ -510,11 +539,12 @@ class PatchInfo:
 
 def run_histocartography(image_path: str, top_k: int = 3) -> Dict[str, Any]:
     tiles = tile_image(image_path)
-    hc = histocartography_rank(image_path, tiles)
-    ch = cheif_rank(image_path, tiles)
-    fused = common_patches(hc, ch, top_k=top_k)
+    hc = histocartography_rank(image_path, tiles, top_n=top_k)
+    fused, ch = common_patches(image_path=image_path, hc=hc, top_k=top_k)
     return {
         "tiles": [t.__dict__ for t in tiles],
+        "hc_rank": [PatchInfo(id=p.id, bbox=p.bbox, score=p.score).__dict__ for p in hc],
+        "cheif_rank": [PatchInfo(id=p.id, bbox=p.bbox, score=p.score).__dict__ for p in ch],
         "patches": [PatchInfo(id=p.id, bbox=p.bbox, score=p.score).__dict__ for p in fused],
     }
 

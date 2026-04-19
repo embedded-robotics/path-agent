@@ -7,6 +7,9 @@ import subprocess
 from typing import List
 
 
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
+
+
 class MedGemmaClient:
     """
     Local wrapper around the reconstructed tools/medgemma batch CLI.
@@ -19,8 +22,9 @@ class MedGemmaClient:
     """
 
     def __init__(self, tool_dir: str | None = None, model: str | None = None):
+        default_tool_dir = _REPO_ROOT / "tools" / "medgemma"
         self.tool_dir = pathlib.Path(
-            tool_dir or os.environ.get("MEDGEMMA_TOOL_DIR", "pathrag-agentic-starter/tools/medgemma")
+            tool_dir or os.environ.get("MEDGEMMA_TOOL_DIR", str(default_tool_dir))
         ).resolve()
         self.python = pathlib.Path(
             os.environ.get("MEDGEMMA_PYTHON", str(self.tool_dir / ".venv" / "bin" / "python"))

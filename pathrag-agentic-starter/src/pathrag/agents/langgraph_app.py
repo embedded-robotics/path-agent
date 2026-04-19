@@ -4,7 +4,7 @@ File: src/pathrag/agents/langgraph_app.py
 Purpose
 -------
 LangGraph orchestration for the Path-RAG pipeline. This graph wires the seven stages:
-  (1) tiling, (2) HC/CHEIF ranking & fusion, (3) labeling + retrieval,
+  (1) HC tiling/ranking, (2) CHIEF refinement within HC bounds, (3) labeling + retrieval,
   (4) ROI & patch agents, (5) critique loop, (6) question-aware re-rank,
   (7) final fusion.
 
@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from pathrag.agents.tools import (
     Patch,
     # Stage 1–2
-    tile_image, histocartography_rank, cheif_rank, common_patches,
+    tile_image, histocartography_rank, common_patches,
     # Stage 3
     identify_subpathology, retrieve_subpath_captions,
     # Stage 4
@@ -121,10 +121,10 @@ class PathRAGState(TypedDict):
 # Stage nodes (pure-ish)
 # =======================
 
-# ---- Stages 1–2: tiling, HC/CHEIF, fused Top-K ----
+# ---- Stages 1–2: HC ranking, valid_bounds handoff, CHIEF final Top-K ----
 def n_tile_and_rank(state: PathRAGState) -> PathRAGState:
     """
-    Stage 1–2: produce consensus Top-K patches.
+    Stage 1–2: reproduce the original combined API flow.
 
     Pre:
       - state["image_path"] is valid
@@ -132,7 +132,7 @@ def n_tile_and_rank(state: PathRAGState) -> PathRAGState:
 
     Post:
       - tiles, hc_rank, cheif_rank are populated (lists of Patch-as-dict)
-      - patches contains fused Top-K consensus (Patch-as-dict, len == top_k)
+      - patches contains final CHIEF Top-K patches (Patch-as-dict, len == top_k)
     """
     # Skip if patches already provided (e.g., from evaluation results)
     if "patches" in state and state["patches"]:
@@ -141,15 +141,18 @@ def n_tile_and_rank(state: PathRAGState) -> PathRAGState:
 
     logger.info("Stage 1–2 start")
     tiles = tile_image(state["image_path"])
-    hc = histocartography_rank(state["image_path"], tiles)
-    ch = cheif_rank(state["image_path"], tiles)
-    fused = common_patches(hc, ch, state["top_k"])
+    hc = histocartography_rank(state["image_path"], tiles, top_n=state["top_k"])
+    final_patches, ch = common_patches(
+        image_path=state["image_path"],
+        hc=hc,
+        top_k=state["top_k"],
+    )
 
     state["tiles"] = [t.__dict__ for t in tiles]
     state["hc_rank"] = [p.__dict__ for p in hc]
     state["cheif_rank"] = [p.__dict__ for p in ch]
-    state["patches"] = [p.__dict__ for p in fused]
-    logger.info(f"Stage 1–2 done: fused={len(state['patches'])}")
+    state["patches"] = [p.__dict__ for p in final_patches]
+    logger.info(f"Stage 1–2 done: hc={len(hc)} chief={len(ch)} final={len(state['patches'])}")
     return state
 
 

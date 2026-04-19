@@ -8,7 +8,8 @@ A GitHub-ready, minimal starter for building an **agentic architecture** around 
 This repo ships with:
 - A clean Python package layout (`src/`).
 - Tool adapters for:
-  - CHIEF / combined patch extraction over HTTP
+  - local histocartography patch extraction
+  - local CHIEF patch refinement
   - Stage 3 local caption bank or retriever API
   - Stage 4 backend selection between local `medgemma` and `llava-med`
   - Stage 5 / Stage 7 OpenAI critique and fusion
@@ -41,35 +42,37 @@ python scripts/run_langgraph.py
 FINAL ANSWER: [mocked] keratinization (example)
 ``` :contentReference[oaicite:1]{index=1}
 
-## Service Mode (Isolated Environments)
+## Local-First Runtime
 
-For the integrated setup, keep each component in its own environment and call them over HTTP:
+The default runtime is now local-first:
 
-- `CHIEF_HeatMap_API` -> Docker container (`http://localhost:8001`)
-- `Complete_Patch_Extraction_API` -> dedicated `venv` (`http://localhost:8003`)
-- `PathGenCLIP_Retriever` -> dedicated `venv` (`http://localhost:8000`, optional)
-- `pathrag-agentic-starter` -> its own `venv` (orchestrator only)
+- Stage 1: local histocartography patch extraction (`tools/histocartography`)
+- Stage 2: local CHIEF refinement (`tools/chief`)
+- Stage 3: local caption bank by default, optional retriever API
+- Stage 4: local `medgemma` or `llava-med`
+- Stage 5 / Stage 7: OpenAI-backed critique and fusion
 
-### Run order
+The old CHIEF Docker + combined API path is no longer the intended local runtime.
 
-1. Start CHIEF API.
-2. Start Combined API (`Complete_Patch_Extraction_API`).
-3. (Optional) Start Retriever API.
-4. Run starter with service flags:
+### Stage 1–2 local environments
+
+Histocartography and CHIEF each run in isolated Python environments and are called as local subprocess tools.
+
+Required env knobs:
 
 ```bash
-cd /home/sina/projects/path-agent/pathrag-agentic-starter
-source .venv/bin/activate
-
-export PATHRAG_USE_COMBINED_API=1
-export PATHRAG_COMBINED_API_URL=http://localhost:8003/process
-
-# optional retriever service
-export PATHRAG_USE_RETRIEVER_API=1
-export PATHRAG_RETRIEVER_API_URL=http://localhost:8000/retrieve_captions
-
-python scripts/run_langgraph.py
+export HISTOCARTOGRAPHY_PYTHON=/home/sina/projects/path-agent/pathrag-agentic-starter/tools/histocartography/.venv/bin/python
+export CHIEF_PYTHON=/home/sina/projects/path-agent/pathrag-agentic-starter/tools/chief/.venv/bin/python
 ```
+
+Notes:
+- The histocartography business logic now lives under `pathrag-agentic-starter/tools/histocartography`.
+- The dedicated histocartography env is expected under:
+  - `pathrag-agentic-starter/tools/histocartography/.venv`
+- CHIEF weights are expected under:
+  - `/home/sina/chief-image-file/CHIEF/model_weight`
+- CHIEF source is expected under:
+  - `/home/sina/chief-image-file/CHIEF`
 
 ### Stage 4 backends
 
@@ -109,13 +112,17 @@ Notes:
 Colab notebook used for the remote LLaVA-Med path:
 - https://colab.research.google.com/drive/18UIsFA5Bq4qYgT1ZY-t85PUfIXE6Eqpq#scrollTo=ERx7apvRyF4W
 
-### Service env knobs
+### Runtime env knobs
 
-- `PATHRAG_USE_COMBINED_API`: `1` to use external patch extraction + CHIEF flow.
-- `PATHRAG_COMBINED_API_URL`: Combined API endpoint.
-- `PATHRAG_USE_RETRIEVER_API`: `1` to use external caption retriever.
+- `HISTOCARTOGRAPHY_PYTHON`: interpreter used by the local histocartography tool
+- `HISTOCARTOGRAPHY_TOOL_DIR`: optional override for `tools/histocartography`
+- `HISTOCARTOGRAPHY_CONFIG`: optional histocartography config override
+- `CHIEF_PYTHON`: interpreter used by the local CHIEF tool
+- `CHIEF_TOOL_DIR`: optional override for `tools/chief`
+- `CHIEF_CONFIG`: optional CHIEF config override
+- `PATHRAG_USE_RETRIEVER_API`: `1` to use external caption retriever
 - `PATHRAG_RETRIEVER_API_URL`: Retriever API endpoint.
-- `PATHRAG_HTTP_TIMEOUT`: HTTP timeout (seconds, default `1800` for Combined API calls).
+- `PATHRAG_HTTP_TIMEOUT`: HTTP timeout (seconds)
 - `PATHRAG_STAGE4_BACKEND`: `llava-med` or `medgemma`
 - `PATHRAG_STAGE4_REMOTE_URL`: remote Stage 4 base URL for LLaVA-Med
 - `PATHRAG_STAGE4_USE_CAPTIONS`: `0` disables Stage 3 captions inside Stage 4 prompts
@@ -158,9 +165,12 @@ Colab notebook used for the remote LLaVA-Med path:
 
 The LangGraph app wires the full 7-stage Path-RAG pipeline:
 
-1. **Stages 1–2 — tiling + HC/CHEIF fusion**  
-   - Tiles the image, ranks patches with HistoCartography and CHEIF, and produces a **consensus Top-K** patch set.  
-   - Controlled by `state["top_k"]`. Only these K patches are carried forward.   
+1. **Stages 1–2 — local HC + local CHIEF**  
+   - Tiles the image into the same uniform `3x3` grid used in Imroze’s original combined API.
+   - Runs local histocartography logic to rank those grid cells by nuclei density.
+   - Converts the selected HC patches into `valid_bounds`.
+   - Runs local CHIEF only inside those bounds and carries forward the final CHIEF `Top-K` patches.
+   - Controlled by `state["top_k"]`. Only these K final CHIEF patches are carried forward.   
 
 2. **Stage 3 — labeling + retrieval**  
    - Identifies a sub-pathology label (e.g., `"scc"`) and retrieves short textual snippets (`full_captions`) for that label. :contentReference[oaicite:4]{index=4}  
@@ -209,7 +219,7 @@ The LangGraph state is defined as a `TypedDict` called `PathRAGState` and is the
   - `round_ix: int` — current critique round (start at 0).
 
 - **Artifacts**
-  - `tiles`, `hc_rank`, `cheif_rank`, `patches` — tiling and ranking outputs (patches stored as dicts).
+  - `tiles`, `hc_rank`, `cheif_rank`, `patches` — Stage 1–2 outputs (patches stored as dicts).
   - `subpath_label`, `full_captions` — Stage-3 outputs.
   - `roi_useful`, `roi_desc`, `patch_summaries` — Stage-4 outputs aligned to `patches`.
   - `chosen_idx` — indices of selected patches after Stage-6.
@@ -274,6 +284,7 @@ pathrag-agentic-starter/.venv/bin/python evaluation/run_imroze_langgraph_eval.py
 Notes:
 - the runner changes into `pathrag-agentic-starter` internally to import the app
 - relative `--sheet` and `--out` paths are now resolved from the shell launch directory
+- the evaluation runner reuses saved patches, so it skips Stage 1–2 entirely
 - current tested quality result:
   - remote `llava-med` outperforms local `medgemma` on the current Imroze smoke case
 

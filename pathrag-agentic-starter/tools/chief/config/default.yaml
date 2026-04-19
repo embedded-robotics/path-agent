@@ -1,0 +1,7 @@
+chief_repo_dir: /home/sina/chief-image-file/CHIEF
+model_dir: /home/sina/chief-image-file/CHIEF/model_weight
+patch_size: 224
+slide_level: 2
+anatomical_label: 1
+valid_bounds:
+  - [0, 600, 1600, 1000]
