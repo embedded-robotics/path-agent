@@ -20,7 +20,27 @@ def load_config(path: str) -> dict[str, Any]:
         return yaml.safe_load(f) or {}
 
 
-def _get_components():
+def resolve_path(raw: str | None, base_dir: Path) -> Path:
+    if not raw:
+        return base_dir
+    p = Path(raw).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    return (base_dir / p).resolve()
+
+
+def _ensure_nuclei_checkpoint(checkpoint_dir: Path, pretrained_data: str) -> Path:
+    from histocartography.preprocessing.nuclei_extraction import DATASET_TO_BOX_URL
+    from histocartography.utils import download_box_link
+
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    model_path = checkpoint_dir / f"{pretrained_data}.pt"
+    if not model_path.exists():
+        download_box_link(DATASET_TO_BOX_URL[pretrained_data], str(model_path))
+    return model_path
+
+
+def _get_components(checkpoint_dir: Path, pretrained_data: str):
     global _NUCLEI_DETECTOR, _FEATS_EXTRACTOR, _KNN_GRAPH_BUILDER
     if _NUCLEI_DETECTOR is None:
         from histocartography.preprocessing import (
@@ -29,7 +49,11 @@ def _get_components():
             NucleiExtractor,
         )
 
-        _NUCLEI_DETECTOR = NucleiExtractor()
+        model_path = _ensure_nuclei_checkpoint(checkpoint_dir, pretrained_data)
+        _NUCLEI_DETECTOR = NucleiExtractor(
+            pretrained_data=pretrained_data,
+            model_path=str(model_path),
+        )
         _FEATS_EXTRACTOR = DeepFeatureExtractor(
             architecture="resnet34",
             patch_size=72,
@@ -78,8 +102,10 @@ def extract_patches(
     top_n: int,
     grid_size: int,
     nuclei_threshold: int,
+    checkpoint_dir: Path,
+    pretrained_data: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    nuclei_detector, feats_extractor, knn_graph_builder = _get_components()
+    nuclei_detector, feats_extractor, knn_graph_builder = _get_components(checkpoint_dir, pretrained_data)
 
     image_array = np.array(image)
     nuclei_map, nuclei_centers = nuclei_detector.process(image_array)
@@ -162,6 +188,8 @@ def run_histocartography(
     svs_level: int | None,
     grid_size: int,
     nuclei_threshold: int,
+    checkpoint_dir: Path,
+    pretrained_data: str,
 ) -> dict[str, Any]:
     image, actual_level = load_input_image(image_path, svs_level)
     try:
@@ -170,6 +198,8 @@ def run_histocartography(
             top_n=top_n,
             grid_size=grid_size,
             nuclei_threshold=nuclei_threshold,
+            checkpoint_dir=checkpoint_dir,
+            pretrained_data=pretrained_data,
         )
     finally:
         image.close()

@@ -2,3 +2,5 @@ svs_level: 2
 top_n: 3
 grid_size: 3
 nuclei_threshold: 5
+pretrained_data: pannuke
+checkpoint_dir: ~/.local/share/pathrag/histocartography/checkpoints

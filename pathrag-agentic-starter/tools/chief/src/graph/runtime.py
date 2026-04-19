@@ -17,6 +17,15 @@ def load_config(path: str) -> dict[str, Any]:
         return yaml.safe_load(f) or {}
 
 
+def resolve_path(raw: str | None, base_dir: Path) -> Path:
+    if not raw:
+        return base_dir
+    p = Path(raw).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    return (base_dir / p).resolve()
+
+
 @contextmanager
 def pushd(path: Path):
     old = Path.cwd()

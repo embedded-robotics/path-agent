@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from .runtime import extract_patches, load_config
+from .runtime import extract_patches, load_config, resolve_path
 
 
 def main() -> None:
@@ -20,9 +20,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    config = load_config(args.config)
-    chief_root = Path(os.environ.get("CHIEF_REPO_DIR", config["chief_repo_dir"])).resolve()
-    model_dir = Path(os.environ.get("CHIEF_MODEL_DIR", config["model_dir"])).resolve()
+    config_path = Path(args.config).resolve()
+    config = load_config(str(config_path))
+    config_dir = config_path.parent
+    chief_root = resolve_path(os.environ.get("CHIEF_REPO_DIR", config.get("chief_repo_dir")), config_dir)
+    model_dir = resolve_path(os.environ.get("CHIEF_MODEL_DIR", config.get("model_dir")), config_dir)
 
     valid_bounds = config.get("valid_bounds") or [[0, 600, 1600, 1000]]
     if args.valid_bounds_json:

@@ -69,10 +69,11 @@ Notes:
 - The histocartography business logic now lives under `pathrag-agentic-starter/tools/histocartography`.
 - The dedicated histocartography env is expected under:
   - `pathrag-agentic-starter/tools/histocartography/.venv`
-- CHIEF weights are expected under:
-  - `/home/sina/chief-image-file/CHIEF/model_weight`
-- CHIEF source is expected under:
-  - `/home/sina/chief-image-file/CHIEF`
+- Default Linux/XDG data locations are now:
+  - CHIEF repo: `~/.local/share/pathrag/chief/repo`
+  - CHIEF weights: `~/.local/share/pathrag/chief/model_weight`
+  - Histocartography checkpoints: `~/.local/share/pathrag/histocartography/checkpoints`
+- These locations are configured in the tool YAML files and can be overridden via env vars.
 
 ### Stage 4 backends
 
@@ -117,9 +118,13 @@ Colab notebook used for the remote LLaVA-Med path:
 - `HISTOCARTOGRAPHY_PYTHON`: interpreter used by the local histocartography tool
 - `HISTOCARTOGRAPHY_TOOL_DIR`: optional override for `tools/histocartography`
 - `HISTOCARTOGRAPHY_CONFIG`: optional histocartography config override
+- `HISTOCARTOGRAPHY_CHECKPOINT_DIR`: optional override for nuclei model checkpoints
+- `HISTOCARTOGRAPHY_PRETRAINED_DATA`: optional nuclei model choice (`pannuke` or `monusac`)
 - `CHIEF_PYTHON`: interpreter used by the local CHIEF tool
 - `CHIEF_TOOL_DIR`: optional override for `tools/chief`
 - `CHIEF_CONFIG`: optional CHIEF config override
+- `CHIEF_REPO_DIR`: optional override for the CHIEF source checkout
+- `CHIEF_MODEL_DIR`: optional override for CHIEF weight files
 - `PATHRAG_USE_RETRIEVER_API`: `1` to use external caption retriever
 - `PATHRAG_RETRIEVER_API_URL`: Retriever API endpoint.
 - `PATHRAG_HTTP_TIMEOUT`: HTTP timeout (seconds)

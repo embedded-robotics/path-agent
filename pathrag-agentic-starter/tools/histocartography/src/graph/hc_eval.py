@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
-from .runtime import load_config, run_histocartography
+from .runtime import load_config, resolve_path, run_histocartography
 
 
 def main() -> None:
@@ -15,13 +16,25 @@ def main() -> None:
     parser.add_argument("--out", required=True, help="Path to write JSON output")
     args = parser.parse_args()
 
-    config = load_config(args.config)
+    config_path = Path(args.config).resolve()
+    config = load_config(str(config_path))
+    config_dir = config_path.parent
+    checkpoint_dir = resolve_path(
+        os.environ.get("HISTOCARTOGRAPHY_CHECKPOINT_DIR", config.get("checkpoint_dir")),
+        config_dir,
+    )
+    pretrained_data = os.environ.get(
+        "HISTOCARTOGRAPHY_PRETRAINED_DATA",
+        str(config.get("pretrained_data", "pannuke")),
+    )
     result = run_histocartography(
         image_path=args.image_path,
         top_n=int(args.top_n or config.get("top_n", 3)),
         svs_level=config.get("svs_level"),
         grid_size=int(config.get("grid_size", 3)),
         nuclei_threshold=int(config.get("nuclei_threshold", 5)),
+        checkpoint_dir=checkpoint_dir,
+        pretrained_data=pretrained_data,
     )
 
     out_path = Path(args.out).resolve()

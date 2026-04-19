@@ -1,0 +1,285 @@
+{
+  "fuse": {
+    "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+    "question": "What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?",
+    "mode": "answer",
+    "top_k": 3,
+    "max_rounds": 1,
+    "round_ix": 1,
+    "tiles": [
+      {
+        "id": "P0",
+        "bbox": [
+          0,
+          0,
+          1228,
+          853
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P1",
+        "bbox": [
+          0,
+          853,
+          1228,
+          1706
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P2",
+        "bbox": [
+          0,
+          1706,
+          1228,
+          2560
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P3",
+        "bbox": [
+          1228,
+          0,
+          2456,
+          853
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P4",
+        "bbox": [
+          1228,
+          853,
+          2456,
+          1706
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P5",
+        "bbox": [
+          1228,
+          1706,
+          2456,
+          2560
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P6",
+        "bbox": [
+          2456,
+          0,
+          3684,
+          853
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P7",
+        "bbox": [
+          2456,
+          853,
+          3684,
+          1706
+        ],
+        "score": 0.0
+      },
+      {
+        "id": "P8",
+        "bbox": [
+          2456,
+          1706,
+          3684,
+          2560
+        ],
+        "score": 0.0
+      }
+    ],
+    "hc_rank": [
+      {
+        "id": "P0",
+        "bbox": [
+          1228,
+          0,
+          2456,
+          853
+        ],
+        "score": 18.0
+      },
+      {
+        "id": "P1",
+        "bbox": [
+          0,
+          1706,
+          1228,
+          2560
+        ],
+        "score": 17.0
+      },
+      {
+        "id": "P2",
+        "bbox": [
+          0,
+          853,
+          1228,
+          1706
+        ],
+        "score": 16.0
+      },
+      {
+        "id": "P3",
+        "bbox": [
+          2456,
+          853,
+          3684,
+          1706
+        ],
+        "score": 15.0
+      },
+      {
+        "id": "P4",
+        "bbox": [
+          1228,
+          1706,
+          2456,
+          2560
+        ],
+        "score": 14.0
+      },
+      {
+        "id": "P5",
+        "bbox": [
+          1228,
+          853,
+          2456,
+          1706
+        ],
+        "score": 14.0
+      },
+      {
+        "id": "P6",
+        "bbox": [
+          0,
+          0,
+          1228,
+          853
+        ],
+        "score": 9.0
+      },
+      {
+        "id": "P7",
+        "bbox": [
+          2456,
+          0,
+          3684,
+          853
+        ],
+        "score": 8.0
+      },
+      {
+        "id": "P8",
+        "bbox": [
+          2456,
+          1706,
+          3684,
+          2560
+        ],
+        "score": 7.0
+      }
+    ],
+    "cheif_rank": [
+      {
+        "id": "CP0",
+        "bbox": [
+          1344,
+          448,
+          1568,
+          672
+        ],
+        "score": 3.0
+      },
+      {
+        "id": "CP1",
+        "bbox": [
+          672,
+          2016,
+          896,
+          2240
+        ],
+        "score": 2.0
+      },
+      {
+        "id": "CP2",
+        "bbox": [
+          448,
+          1792,
+          672,
+          2016
+        ],
+        "score": 1.0
+      }
+    ],
+    "patches": [
+      {
+        "id": "CP0",
+        "bbox": [
+          1344,
+          448,
+          1568,
+          672
+        ],
+        "score": 3.0
+      },
+      {
+        "id": "CP1",
+        "bbox": [
+          672,
+          2016,
+          896,
+          2240
+        ],
+        "score": 2.0
+      },
+      {
+        "id": "CP2",
+        "bbox": [
+          448,
+          1792,
+          672,
+          2016
+        ],
+        "score": 1.0
+      }
+    ],
+    "subpath_label": "breast",
+    "full_captions": [
+      "Breast tissue may contain ducts, lobules, adipose tissue, fibrous stroma, and blood vessels.",
+      "Distinguish vascular lumens from ductal or glandular spaces by wall thickness, lining, and surrounding stroma."
+    ],
+    "roi_useful": [
+      true,
+      true,
+      true
+    ],
+    "roi_desc": [
+      "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**.",
+      "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are likely **blood vessels**.",
+      "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**."
+    ],
+    "patch_summaries": [
+      "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts.",
+      "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts.",
+      "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most consistent with ducts."
+    ],
+    "dynamic_k": 3,
+    "chosen_idx": [
+      2,
+      0,
+      1
+    ],
+    "final_answer": "Based on the evidence from the selected patches, the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most consistent with ducts. This conclusion is supported by the direct evidence from all three patches (CP0, CP1, and CP2), which consistently identify these structures as ducts. The morphology described, including the thick walls and the presence of clear or collapsed lumens, aligns with the typical appearance of ducts in breast tissue. There is no conflicting evidence from the patches, and the description does not suggest any other structures such as blood vessels or glandular spaces. Therefore, the structures in question are best identified as ducts based on the available evidence."
+  }
+}

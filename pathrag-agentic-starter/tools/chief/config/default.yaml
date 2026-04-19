@@ -1,5 +1,5 @@
-chief_repo_dir: /home/sina/chief-image-file/CHIEF
-model_dir: /home/sina/chief-image-file/CHIEF/model_weight
+chief_repo_dir: ~/.local/share/pathrag/chief/repo
+model_dir: ~/.local/share/pathrag/chief/model_weight
 patch_size: 224
 slide_level: 2
 anatomical_label: 1
