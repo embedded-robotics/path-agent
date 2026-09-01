@@ -1,0 +1,82 @@
+{
+  "answers": [
+    {
+      "case_id": "07_level2",
+      "question_id": 1,
+      "category": "position_independent",
+      "question": "What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?",
+      "expected_answer": "These are blood vessels, specifically a dense network of muscular arteries and thick-walled veins.",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "question_id": 5,
+      "category": "patch_usefulness",
+      "question": "Is there visual evidence of acute hemorrhage anywhere within this tissue sample?",
+      "expected_answer": "Yes, there are distinct, irregular deep crimson-red pools of extravasated red blood cells.",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "question_id": 8,
+      "category": "position_dependent",
+      "question": "What distinct morphological difference is observed between the tissue in the far-left region compared to the large solid mass occupying the right half of the slide?",
+      "expected_answer": "The far-left region consists of a loose, edematous stroma containing numerous blood vessels and adipose tissue, while the right half is a dense, continuous eosinophilic mass with areas of hemorrhage.",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "question_id": 1,
+      "category": "position_independent",
+      "question": "What is the distinct, densely cellular, multi-lobulated basophilic (dark purple/blue) structure embedded within the paler connective tissue?",
+      "expected_answer": "This is a dense epithelial or glandular proliferation (such as a lobular expansion or focal lesion), which contrasts sharply with the surrounding eosinophilic (pink) stroma.",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "question_id": 6,
+      "category": "patch_usefulness",
+      "question": "Does this tissue section contain distinct epithelial-lined ductal or glandular structures?",
+      "expected_answer": "Yes, there are numerous irregularly shaped, elongated, and slit-like structures lined by epithelial cells.",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "question_id": 9,
+      "category": "position_dependent",
+      "question": "Where are the most distinct, bright red linear streaks of hemorrhage positioned relative to the large basophilic mass?",
+      "expected_answer": "The prominent linear red streaks are located predominantly in the central stroma, positioned directly below (inferior to) the dense basophilic mass.",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,714 @@
+{
+  "results": [
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "payload": {
+        "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+        "svs_level": 2,
+        "top_n": 3,
+        "save_patches": true,
+        "patch_size": 224,
+        "anatomical_label": 1,
+        "top_k": 5
+      },
+      "status_code": 200,
+      "response": {
+        "success": true,
+        "message": "Successfully processed patches through CHIEF API",
+        "patch_extraction_info": {
+          "total_patches_extracted": 3,
+          "coordinates": [
+            {
+              "patch_number": 1,
+              "x1": 1228,
+              "y1": 0,
+              "x2": 2456,
+              "y2": 853,
+              "nuclei_count": 18
+            },
+            {
+              "patch_number": 2,
+              "x1": 0,
+              "y1": 1706,
+              "x2": 1228,
+              "y2": 2560,
+              "nuclei_count": 17
+            },
+            {
+              "patch_number": 3,
+              "x1": 0,
+              "y1": 853,
+              "x2": 1228,
+              "y2": 1706,
+              "nuclei_count": 16
+            }
+          ]
+        },
+        "chief_response": {
+          "top_k_patches": [
+            {
+              "x1": 1344,
+              "y1": 448,
+              "x2": 1568,
+              "y2": 672
+            },
+            {
+              "x1": 672,
+              "y1": 2016,
+              "x2": 896,
+              "y2": 2240
+            },
+            {
+              "x1": 448,
+              "y1": 1792,
+              "x2": 672,
+              "y2": 2016
+            },
+            {
+              "x1": 1792,
+              "y1": 448,
+              "x2": 2016,
+              "y2": 672
+            },
+            {
+              "x1": 1568,
+              "y1": 448,
+              "x2": 1792,
+              "y2": 672
+            }
+          ],
+          "heatmap": [
+            [
+              0.5210563540458679,
+              0.5374723672866821,
+              0.3619028627872467,
+              0.5875285267829895,
+              0.5977473855018616,
+              0.33096709847450256,
+              0.3523082137107849,
+              0.5557926893234253,
+              0.47943082451820374,
+              0.47724130749702454,
+              0.485211580991745,
+              0.5025968551635742,
+              0.6961482763290405,
+              0.5899549126625061,
+              0.6552574634552002,
+              0.43556538224220276,
+              0.038227833807468414
+            ],
+            [
+              0.4783257842063904,
+              0.6034312844276428,
+              0.4215511083602905,
+              0.9040160775184631,
+              0.8341021537780762,
+              0.7671865820884705,
+              0.16214686632156372,
+              0.5723797082901001,
+              0.3391071557998657,
+              0.3186730146408081,
+              0.660627543926239,
+              0.6443107724189758,
+              0.8053211569786072,
+              0.3437243700027466,
+              0.6625888347625732,
+              0.6167861819267273,
+              0.11609595268964767
+            ],
+            [
+              0.57853102684021,
+              0.5382923483848572,
+              0.6026058793067932,
+              0.701078474521637,
+              0.43683087825775146,
+              0.8726406693458557,
+              0.9733181595802307,
+              0.8757150769233704,
+              0.9008310437202454,
+              0.7151170372962952,
+              0.6318516135215759,
+              0.6929720640182495,
+              0.6404945254325867,
+              0.5649113655090332,
+              0.7125518918037415,
+              0.6534897685050964,
+              0.4270046651363373
+            ],
+            [
+              0.44060218334198,
+              0.4197522699832916,
+              0.4965377151966095,
+              0.552875280380249,
+              0.7246137261390686,
+              0.7411595582962036,
+              0.6451441645622253,
+              0.7417196035385132,
+              0.8249810934066772,
+              0.7239572405815125,
+              0.23803403973579407,
+              0.7395297288894653,
+              0.6890944242477417,
+              0.4767111837863922,
+              0.5149007439613342,
+              0.6330519914627075,
+              0.31640365719795227
+            ],
+            [
+              0.3698233664035797,
+              0.7219505906105042,
+              0.4297304153442383,
+              0.5998314023017883,
+              0.7556121349334717,
+              0.34155505895614624,
+              0.48426803946495056,
+              0.6718895435333252,
+              0.7973037362098694,
+              0.6801607608795166,
+              0.34553012251853943,
+              0.5969559550285339,
+              0.5667834281921387,
+              0.6893185973167419,
+              0.6855984926223755,
+              0.7598007917404175,
+              0.23377686738967896
+            ],
+            [
+              0.43727660179138184,
+              0.4820820093154907,
+              0.46038883924484253,
+              0.6159518957138062,
+              0.597894012928009,
+              0.37333083152770996,
+              0.4903075695037842,
+              0.6063200831413269,
+              0.49702396988868713,
+              0.7050212621688843,
+              0.5241361260414124,
+              0.5004190802574158,
+              0.8134111762046814,
+              0.5125132203102112,
+              0.45165130496025085,
+              0.22124402225017548,
+              0.12544995546340942
+            ],
+            [
+              0.6136757731437683,
+              0.3752257823944092,
+              0.518473744392395,
+              0.7485759854316711,
+              0.6922299265861511,
+              0.4423893094062805,
+              0.4897068440914154,
+              0.6204463839530945,
+              0.5672019720077515,
+              0.48715701699256897,
+              0.6123183369636536,
+              0.8454248905181885,
+              0.9051491022109985,
+              0.875536322593689,
+              0.38641902804374695,
+              0.5574430823326111,
+              0.18015268445014954
+            ],
+            [
+              0.6890935897827148,
+              0.39598938822746277,
+              0.5289795398712158,
+              0.5718924403190613,
+              0.6605994701385498,
+              0.6231918931007385,
+              0.5357075929641724,
+              0.5604131817817688,
+              0.5366799235343933,
+              0.6262301206588745,
+              0.7034862637519836,
+              0.8065715432167053,
+              0.9843772053718567,
+              0.4550577402114868,
+              0.6781904101371765,
+              0.7101125121116638,
+              0.34135913848876953
+            ],
+            [
+              0.6065149903297424,
+              0.2749412953853607,
+              0.9042088389396667,
+              0.7434865832328796,
+              0.5920639038085938,
+              0.6059931516647339,
+              0.6716402769088745,
+              0.5519551634788513,
+              0.5481963753700256,
+              0.7402980923652649,
+              0.5444924235343933,
+              0.9184538722038269,
+              0.6217337250709534,
+              0.734419584274292,
+              0.9047010540962219,
+              0.540900707244873,
+              0.17268669605255127
+            ],
+            [
+              0.6326406598091125,
+              0.34982484579086304,
+              0.5927171111106873,
+              0.9119174480438232,
+              0.7633598446846008,
+              0.7084051966667175,
+              0.7529162764549255,
+              0.6630849242210388,
+              0.6658276915550232,
+              0.48194000124931335,
+              0.7948229908943176,
+              0.6345980763435364,
+              0.7265547513961792,
+              0.5774027109146118,
+              0.7456165552139282,
+              0.5519881248474121,
+              0.08128933608531952
+            ],
+            [
+              0.7049253582954407,
+              0.7872657775878906,
+              0.3975953161716461,
+              0.49424517154693604,
+              0.48169615864753723,
+              0.36593014001846313,
+              0.3602445125579834,
+              0.5491383671760559,
+              0.43901219964027405,
+              0.45554566383361816,
+              0.5688242316246033,
+              0.6600903868675232,
+              0.42658719420433044,
+              0.5797719359397888,
+              0.7067418694496155,
+              0.6651463508605957,
+              0.49893686175346375
+            ],
+            [
+              0.5382399559020996,
+              0.5413931608200073,
+              0.2837556004524231,
+              0.6158150434494019,
+              0.5098876953125,
+              0.30251067876815796,
+              0.6224991083145142,
+              0.7107529044151306,
+              0.6723858714103699,
+              0.5656877756118774,
+              0.6414087414741516,
+              0.34824246168136597,
+              0.5484576225280762,
+              0.30311957001686096,
+              0.6163855791091919,
+              0.7130638360977173,
+              0.4924425184726715
+            ]
+          ],
+          "slide_level": 0,
+          "message": "Successfully extracted 5 patches at slide level 0"
+        },
+        "saved_patches_info": {
+          "patches_saved": 5,
+          "patch_files": [
+            "output_patches/patch_1.jpg",
+            "output_patches/patch_2.jpg",
+            "output_patches/patch_3.jpg",
+            "output_patches/patch_4.jpg",
+            "output_patches/patch_5.jpg"
+          ],
+          "visualization_file": "output_patches/wsi_visualization.jpg",
+          "heatmap_file": "output_patches/chief_heatmap.jpg"
+        }
+      },
+      "questions": [
+        {
+          "question_id": 1,
+          "category": "position_independent",
+          "question": "What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?",
+          "expected_answer": "These are blood vessels, specifically a dense network of muscular arteries and thick-walled veins."
+        },
+        {
+          "question_id": 2,
+          "category": "position_independent",
+          "question": "Identify the clear, unstained, \"bubbly\" microscopic spaces interspersed alongside the prominent vascular structures.",
+          "expected_answer": "These spaces represent mature adipose (fat) tissue integrated within the connective tissue."
+        },
+        {
+          "question_id": 3,
+          "category": "position_independent",
+          "question": "What pathological process is indicated by the irregular, deep crimson-red pools of material embedded directly within the dense, solid nodular tissue?",
+          "expected_answer": "These bright red patches indicate focal areas of acute hemorrhage or severe vascular congestion within the tissue mass."
+        },
+        {
+          "question_id": 4,
+          "category": "position_independent",
+          "question": "Within the dense, deeply eosinophilic nodules, there are paler, smudgy zones lacking a sweeping fibrous texture. What do these visually structureless zones represent?",
+          "expected_answer": "These pale, structureless zones represent areas of tissue degeneration or necrosis occurring within the solid tissue mass."
+        },
+        {
+          "question_id": 5,
+          "category": "patch_usefulness",
+          "question": "Is there visual evidence of acute hemorrhage anywhere within this tissue sample?",
+          "expected_answer": "Yes, there are distinct, irregular deep crimson-red pools of extravasated red blood cells."
+        },
+        {
+          "question_id": 6,
+          "category": "patch_usefulness",
+          "question": "Does this biopsy specimen contain mature adipose tissue?",
+          "expected_answer": "Yes, it contains regions with clear, unstained, \"bubbly\" microscopic spaces."
+        },
+        {
+          "question_id": 7,
+          "category": "patch_usefulness",
+          "question": "Are there thick-walled blood vessels present in this tissue section?",
+          "expected_answer": "Yes, there are numerous prominent, circular-to-oval structures with thick eosinophilic walls and central lumens."
+        },
+        {
+          "question_id": 8,
+          "category": "position_dependent",
+          "question": "What distinct morphological difference is observed between the tissue in the far-left region compared to the large solid mass occupying the right half of the slide?",
+          "expected_answer": "The far-left region consists of a loose, edematous stroma containing numerous blood vessels and adipose tissue, while the right half is a dense, continuous eosinophilic mass with areas of hemorrhage."
+        },
+        {
+          "question_id": 9,
+          "category": "position_dependent",
+          "question": "Where are the dense clusters of thick-walled blood vessels primarily located in this overall image?",
+          "expected_answer": "They are heavily concentrated in the left and center-left regions of the tissue section."
+        },
+        {
+          "question_id": 10,
+          "category": "position_dependent",
+          "question": "In what specific area of the slide are the extensive, bright red patches of hemorrhage located?",
+          "expected_answer": "They are found within and immediately surrounding the dense, solid nodular mass on the right half of the slide."
+        }
+      ]
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "payload": {
+        "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+        "svs_level": 2,
+        "top_n": 3,
+        "save_patches": true,
+        "patch_size": 224,
+        "anatomical_label": 1,
+        "top_k": 5
+      },
+      "status_code": 200,
+      "response": {
+        "success": true,
+        "message": "Successfully processed patches through CHIEF API",
+        "patch_extraction_info": {
+          "total_patches_extracted": 3,
+          "coordinates": [
+            {
+              "patch_number": 1,
+              "x1": 0,
+              "y1": 644,
+              "x2": 1140,
+              "y2": 1288,
+              "nuclei_count": 22
+            },
+            {
+              "patch_number": 2,
+              "x1": 0,
+              "y1": 0,
+              "x2": 1140,
+              "y2": 644,
+              "nuclei_count": 12
+            },
+            {
+              "patch_number": 3,
+              "x1": 2280,
+              "y1": 1288,
+              "x2": 3420,
+              "y2": 1933,
+              "nuclei_count": 11
+            }
+          ]
+        },
+        "chief_response": {
+          "top_k_patches": [
+            {
+              "x1": 2464,
+              "y1": 1344,
+              "x2": 2688,
+              "y2": 1568
+            },
+            {
+              "x1": 672,
+              "y1": 672,
+              "x2": 896,
+              "y2": 896
+            },
+            {
+              "x1": 2464,
+              "y1": 1568,
+              "x2": 2688,
+              "y2": 1792
+            },
+            {
+              "x1": 224,
+              "y1": 896,
+              "x2": 448,
+              "y2": 1120
+            },
+            {
+              "x1": 672,
+              "y1": 896,
+              "x2": 896,
+              "y2": 1120
+            }
+          ],
+          "heatmap": [
+            [
+              0.26514652371406555,
+              0.3866204023361206,
+              0.46975210309028625,
+              0.3109777867794037,
+              0.2942769229412079,
+              0.2906774580478668,
+              0.41519954800605774,
+              0.4500858187675476,
+              0.4396505653858185,
+              0.45669955015182495,
+              0.4254344403743744,
+              0.40945276618003845,
+              0.5128861665725708,
+              0.3529314398765564,
+              0.46842917799949646,
+              0.008744006045162678
+            ],
+            [
+              0.3921924829483032,
+              0.11669568717479706,
+              0.2986869215965271,
+              0.43422967195510864,
+              0.5308943390846252,
+              0.739608108997345,
+              0.703635036945343,
+              0.6842397451400757,
+              0.7002158761024475,
+              0.5366398692131042,
+              0.4111502170562744,
+              0.3918186128139496,
+              0.39272427558898926,
+              0.47560441493988037,
+              0.553934633731842,
+              0.0070239887572824955
+            ],
+            [
+              0.43440452218055725,
+              0.21003173291683197,
+              0.6488588452339172,
+              0.7521578073501587,
+              0.7713759541511536,
+              0.7778799533843994,
+              0.8443029522895813,
+              0.6110167503356934,
+              0.47343116998672485,
+              0.5336553454399109,
+              0.47913774847984314,
+              0.285723477602005,
+              0.5496259927749634,
+              0.5217271447181702,
+              0.3654661476612091,
+              0.08825286477804184
+            ],
+            [
+              0.38393375277519226,
+              0.7574841976165771,
+              0.6325961351394653,
+              0.8744128346443176,
+              0.6060011386871338,
+              0.4667075276374817,
+              0.5962427258491516,
+              0.6327325701713562,
+              0.5193996429443359,
+              0.5787505507469177,
+              0.5866662859916687,
+              0.7352511286735535,
+              0.2363002598285675,
+              0.5028668642044067,
+              0.5465801358222961,
+              0.2015332132577896
+            ],
+            [
+              0.5491562485694885,
+              0.85170978307724,
+              0.8231495022773743,
+              0.8430103659629822,
+              0.7340801358222961,
+              0.6224337220191956,
+              0.5890441536903381,
+              0.6838931441307068,
+              0.7126749753952026,
+              0.5335730910301208,
+              0.6194778084754944,
+              0.5126624703407288,
+              0.7049919962882996,
+              0.6447018384933472,
+              0.5744010806083679,
+              0.2650870084762573
+            ],
+            [
+              0.2300024926662445,
+              0.7368534803390503,
+              0.8580647706985474,
+              0.9708073139190674,
+              0.7365402579307556,
+              0.6406493782997131,
+              0.7418366074562073,
+              0.5924100875854492,
+              0.6159684062004089,
+              0.5991295576095581,
+              0.6963414549827576,
+              0.6603841185569763,
+              0.6960565447807312,
+              0.6725565791130066,
+              0.6119204759597778,
+              0.01619500294327736
+            ],
+            [
+              0.3468233644962311,
+              0.49738866090774536,
+              0.7837393879890442,
+              0.747401773929596,
+              0.6938388347625732,
+              0.7696415781974792,
+              0.5551267266273499,
+              0.3129865825176239,
+              0.6065922975540161,
+              0.6877132058143616,
+              0.8577997088432312,
+              0.9103752970695496,
+              0.6158051490783691,
+              0.6797159910202026,
+              0.4996548891067505,
+              0.0088401660323143
+            ],
+            [
+              0.571617841720581,
+              0.6102195382118225,
+              0.37691545486450195,
+              0.3230626881122589,
+              0.4187758266925812,
+              0.43059542775154114,
+              0.6711530685424805,
+              0.5067740082740784,
+              0.772458016872406,
+              0.6437479257583618,
+              0.5658199191093445,
+              0.8664420247077942,
+              0.751600980758667,
+              0.5733094215393066,
+              0.4870742857456207,
+              0.08739254623651505
+            ],
+            [
+              0.0912880077958107,
+              0.1295466125011444,
+              0.09685815125703812,
+              0.09037765860557556,
+              0.07311878353357315,
+              0.06768381595611572,
+              0.036245137453079224,
+              0.38956794142723083,
+              0.45598992705345154,
+              0.4858382046222687,
+              0.476182222366333,
+              0.5763029456138611,
+              0.10122764855623245,
+              0.07746686041355133,
+              0.12765108048915863,
+              0.05039811506867409
+            ]
+          ],
+          "slide_level": 0,
+          "message": "Successfully extracted 5 patches at slide level 0"
+        },
+        "saved_patches_info": {
+          "patches_saved": 5,
+          "patch_files": [
+            "output_patches/patch_1.jpg",
+            "output_patches/patch_2.jpg",
+            "output_patches/patch_3.jpg",
+            "output_patches/patch_4.jpg",
+            "output_patches/patch_5.jpg"
+          ],
+          "visualization_file": "output_patches/wsi_visualization.jpg",
+          "heatmap_file": "output_patches/chief_heatmap.jpg"
+        }
+      },
+      "questions": [
+        {
+          "question_id": 1,
+          "category": "position_independent",
+          "question": "What is the distinct, densely cellular, multi-lobulated basophilic (dark purple/blue) structure embedded within the paler connective tissue?",
+          "expected_answer": "This is a dense epithelial or glandular proliferation (such as a lobular expansion or focal lesion), which contrasts sharply with the surrounding eosinophilic (pink) stroma."
+        },
+        {
+          "question_id": 2,
+          "category": "position_independent",
+          "question": "Scattered throughout the fibrous tissue are irregular, elongated, and sometimes slit-like clear spaces lined by darker cells. What do these structures represent?",
+          "expected_answer": "These represent glandular or ductal structures, some of which appear compressed by the surrounding fibrous connective tissue."
+        },
+        {
+          "question_id": 3,
+          "category": "position_independent",
+          "question": "Identify the clear, unstained, round \"bubbly\" microscopic spaces that are interspersed within the paler pink fibrous tissue.",
+          "expected_answer": "These spaces represent mature adipose (fat) tissue integrated within the stroma."
+        },
+        {
+          "question_id": 4,
+          "category": "position_independent",
+          "question": "What do the prominent, bright red, linear and focal collections of material scattered within the fibrous stroma indicate?",
+          "expected_answer": "These bright red patches indicate localized areas of acute hemorrhage or focal pooling of red blood cells."
+        },
+        {
+          "question_id": 5,
+          "category": "patch_usefulness",
+          "question": "Is there visual evidence of dense, multi-lobulated basophilic cellular proliferation anywhere in this tissue specimen?",
+          "expected_answer": "Yes, there is a prominent, dark purple/blue multi-lobulated mass."
+        },
+        {
+          "question_id": 6,
+          "category": "patch_usefulness",
+          "question": "Does this tissue section contain distinct epithelial-lined ductal or glandular structures?",
+          "expected_answer": "Yes, there are numerous irregularly shaped, elongated, and slit-like structures lined by epithelial cells."
+        },
+        {
+          "question_id": 7,
+          "category": "patch_usefulness",
+          "question": "Is there evidence of focal hemorrhage or prominent red blood cell pooling within the stroma of this sample?",
+          "expected_answer": "Yes, there are distinct, bright red, linear collections of red blood cells."
+        },
+        {
+          "question_id": 8,
+          "category": "position_dependent",
+          "question": "In what specific region of the tissue section is the prominent, dense, multi-lobulated basophilic (purple) mass located?",
+          "expected_answer": "It is located in the upper-central region of the tissue section."
+        },
+        {
+          "question_id": 9,
+          "category": "position_dependent",
+          "question": "Where are the most distinct, bright red linear streaks of hemorrhage positioned relative to the large basophilic mass?",
+          "expected_answer": "The prominent linear red streaks are located predominantly in the central stroma, positioned directly below (inferior to) the dense basophilic mass."
+        },
+        {
+          "question_id": 10,
+          "category": "position_dependent",
+          "question": "How does the spatial distribution of the clear, unstained adipose tissue compare to the dense pale pink fibrous stroma across the image?",
+          "expected_answer": "The solid fibrous stroma dominates the central and upper-left portions of the tissue, while the clear adipose tissue is heavily concentrated along the lower margins and the far-right edge of the section."
+        }
+      ]
+    }
+  ]
+}

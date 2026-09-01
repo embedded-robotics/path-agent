@@ -1,0 +1,1724 @@
+{
+  "questions": [
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 1,
+      "category": "position_independent",
+      "question": "What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?",
+      "expected_answer": "These are blood vessels, specifically a dense network of muscular arteries and thick-walled veins.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 2,
+      "category": "position_independent",
+      "question": "Identify the clear, unstained, \"bubbly\" microscopic spaces interspersed alongside the prominent vascular structures.",
+      "expected_answer": "These spaces represent mature adipose (fat) tissue integrated within the connective tissue.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 3,
+      "category": "position_independent",
+      "question": "What pathological process is indicated by the irregular, deep crimson-red pools of material embedded directly within the dense, solid nodular tissue?",
+      "expected_answer": "These bright red patches indicate focal areas of acute hemorrhage or severe vascular congestion within the tissue mass.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 4,
+      "category": "position_independent",
+      "question": "Within the dense, deeply eosinophilic nodules, there are paler, smudgy zones lacking a sweeping fibrous texture. What do these visually structureless zones represent?",
+      "expected_answer": "These pale, structureless zones represent areas of tissue degeneration or necrosis occurring within the solid tissue mass.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 5,
+      "category": "patch_usefulness",
+      "question": "Is there visual evidence of acute hemorrhage anywhere within this tissue sample?",
+      "expected_answer": "Yes, there are distinct, irregular deep crimson-red pools of extravasated red blood cells.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 6,
+      "category": "patch_usefulness",
+      "question": "Does this biopsy specimen contain mature adipose tissue?",
+      "expected_answer": "Yes, it contains regions with clear, unstained, \"bubbly\" microscopic spaces.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 7,
+      "category": "patch_usefulness",
+      "question": "Are there thick-walled blood vessels present in this tissue section?",
+      "expected_answer": "Yes, there are numerous prominent, circular-to-oval structures with thick eosinophilic walls and central lumens.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 8,
+      "category": "position_dependent",
+      "question": "What distinct morphological difference is observed between the tissue in the far-left region compared to the large solid mass occupying the right half of the slide?",
+      "expected_answer": "The far-left region consists of a loose, edematous stroma containing numerous blood vessels and adipose tissue, while the right half is a dense, continuous eosinophilic mass with areas of hemorrhage.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 9,
+      "category": "position_dependent",
+      "question": "Where are the dense clusters of thick-walled blood vessels primarily located in this overall image?",
+      "expected_answer": "They are heavily concentrated in the left and center-left regions of the tissue section.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "07_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "source_image": "/home/sina/Downloads/07_level2.jpg",
+      "question_id": 10,
+      "category": "position_dependent",
+      "question": "In what specific area of the slide are the extensive, bright red patches of hemorrhage located?",
+      "expected_answer": "They are found within and immediately surrounding the dense, solid nodular mass on the right half of the slide.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 1228,
+          "y1": 0,
+          "x2": 2456,
+          "y2": 853,
+          "nuclei_count": 18
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 1706,
+          "x2": 1228,
+          "y2": 2560,
+          "nuclei_count": 17
+        },
+        {
+          "patch_number": 3,
+          "x1": 0,
+          "y1": 853,
+          "x2": 1228,
+          "y2": 1706,
+          "nuclei_count": 16
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 1344,
+          "y1": 448,
+          "x2": 1568,
+          "y2": 672
+        },
+        {
+          "x1": 672,
+          "y1": 2016,
+          "x2": 896,
+          "y2": 2240
+        },
+        {
+          "x1": 448,
+          "y1": 1792,
+          "x2": 672,
+          "y2": 2016
+        },
+        {
+          "x1": 1792,
+          "y1": 448,
+          "x2": 2016,
+          "y2": 672
+        },
+        {
+          "x1": 1568,
+          "y1": 448,
+          "x2": 1792,
+          "y2": 672
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 1,
+      "category": "position_independent",
+      "question": "What is the distinct, densely cellular, multi-lobulated basophilic (dark purple/blue) structure embedded within the paler connective tissue?",
+      "expected_answer": "This is a dense epithelial or glandular proliferation (such as a lobular expansion or focal lesion), which contrasts sharply with the surrounding eosinophilic (pink) stroma.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 2,
+      "category": "position_independent",
+      "question": "Scattered throughout the fibrous tissue are irregular, elongated, and sometimes slit-like clear spaces lined by darker cells. What do these structures represent?",
+      "expected_answer": "These represent glandular or ductal structures, some of which appear compressed by the surrounding fibrous connective tissue.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 3,
+      "category": "position_independent",
+      "question": "Identify the clear, unstained, round \"bubbly\" microscopic spaces that are interspersed within the paler pink fibrous tissue.",
+      "expected_answer": "These spaces represent mature adipose (fat) tissue integrated within the stroma.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 4,
+      "category": "position_independent",
+      "question": "What do the prominent, bright red, linear and focal collections of material scattered within the fibrous stroma indicate?",
+      "expected_answer": "These bright red patches indicate localized areas of acute hemorrhage or focal pooling of red blood cells.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 5,
+      "category": "patch_usefulness",
+      "question": "Is there visual evidence of dense, multi-lobulated basophilic cellular proliferation anywhere in this tissue specimen?",
+      "expected_answer": "Yes, there is a prominent, dark purple/blue multi-lobulated mass.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 6,
+      "category": "patch_usefulness",
+      "question": "Does this tissue section contain distinct epithelial-lined ductal or glandular structures?",
+      "expected_answer": "Yes, there are numerous irregularly shaped, elongated, and slit-like structures lined by epithelial cells.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 7,
+      "category": "patch_usefulness",
+      "question": "Is there evidence of focal hemorrhage or prominent red blood cell pooling within the stroma of this sample?",
+      "expected_answer": "Yes, there are distinct, bright red, linear collections of red blood cells.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 8,
+      "category": "position_dependent",
+      "question": "In what specific region of the tissue section is the prominent, dense, multi-lobulated basophilic (purple) mass located?",
+      "expected_answer": "It is located in the upper-central region of the tissue section.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 9,
+      "category": "position_dependent",
+      "question": "Where are the most distinct, bright red linear streaks of hemorrhage positioned relative to the large basophilic mass?",
+      "expected_answer": "The prominent linear red streaks are located predominantly in the central stroma, positioned directly below (inferior to) the dense basophilic mass.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    },
+    {
+      "case_id": "19_level2",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/19_level2.jpg",
+      "source_image": "/home/sina/Downloads/19_level2.jpg",
+      "question_id": 10,
+      "category": "position_dependent",
+      "question": "How does the spatial distribution of the clear, unstained adipose tissue compare to the dense pale pink fibrous stroma across the image?",
+      "expected_answer": "The solid fibrous stroma dominates the central and upper-left portions of the tissue, while the clear adipose tissue is heavily concentrated along the lower margins and the far-right edge of the section.",
+      "process_status_code": 200,
+      "process_success": true,
+      "selected_patch_count": 3,
+      "selected_patch_coords": [
+        {
+          "patch_number": 1,
+          "x1": 0,
+          "y1": 644,
+          "x2": 1140,
+          "y2": 1288,
+          "nuclei_count": 22
+        },
+        {
+          "patch_number": 2,
+          "x1": 0,
+          "y1": 0,
+          "x2": 1140,
+          "y2": 644,
+          "nuclei_count": 12
+        },
+        {
+          "patch_number": 3,
+          "x1": 2280,
+          "y1": 1288,
+          "x2": 3420,
+          "y2": 1933,
+          "nuclei_count": 11
+        }
+      ],
+      "chief_patch_count": 5,
+      "chief_patch_coords": [
+        {
+          "x1": 2464,
+          "y1": 1344,
+          "x2": 2688,
+          "y2": 1568
+        },
+        {
+          "x1": 672,
+          "y1": 672,
+          "x2": 896,
+          "y2": 896
+        },
+        {
+          "x1": 2464,
+          "y1": 1568,
+          "x2": 2688,
+          "y2": 1792
+        },
+        {
+          "x1": 224,
+          "y1": 896,
+          "x2": 448,
+          "y2": 1120
+        },
+        {
+          "x1": 672,
+          "y1": 896,
+          "x2": 896,
+          "y2": 1120
+        }
+      ],
+      "saved_patch_files": [
+        "output_patches/patch_1.jpg",
+        "output_patches/patch_2.jpg",
+        "output_patches/patch_3.jpg",
+        "output_patches/patch_4.jpg",
+        "output_patches/patch_5.jpg"
+      ],
+      "visualization_file": "output_patches/wsi_visualization.jpg",
+      "heatmap_file": "output_patches/chief_heatmap.jpg",
+      "model_answer": "",
+      "grading": {
+        "score": null,
+        "notes": "",
+        "matched_expected": null
+      }
+    }
+  ]
+}

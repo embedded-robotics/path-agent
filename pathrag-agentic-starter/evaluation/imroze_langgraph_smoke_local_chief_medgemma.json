@@ -1,0 +1,38 @@
+{
+  "answers": [
+    {
+      "case_id": "07_level2",
+      "question_id": 1,
+      "category": "position_independent",
+      "image_path": "/home/sina/projects/path-agent/svs_examples/imroze/07_level2.jpg",
+      "question": "What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?",
+      "expected_answer": "These are blood vessels, specifically a dense network of muscular arteries and thick-walled veins.",
+      "patch_count": 5,
+      "model_answer": "[fusion-fallback answer] Q: What are the prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma?\nlabel=breast\n- CP0 \u2192 [ROUND=0] [CENTRAL] [PATCH=0] Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts. (ROI: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**.)\n- CP1 \u2192 [ROUND=0] [CENTRAL] [PATCH=1] Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts. (ROI: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are likely **blood vessels**.)\n- CP2 \u2192 [ROUND=0] [CENTRAL] [PATCH=2] Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most consistent with ducts. (ROI: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**.)\nError calling GPT model: The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+      "subpath_label": "breast",
+      "full_captions": [
+        "Breast tissue may contain ducts, lobules, adipose tissue, fibrous stroma, and blood vessels.",
+        "Distinguish vascular lumens from ductal or glandular spaces by wall thickness, lining, and surrounding stroma."
+      ],
+      "chosen_idx": [
+        0,
+        1,
+        2
+      ],
+      "patch_summaries": [
+        "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts.",
+        "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts.",
+        "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most consistent with ducts.",
+        "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with blood vessels.",
+        "Direct evidence: The prominent, discrete, thick-walled circular structures with clear or collapsed lumens are most consistent with ducts."
+      ],
+      "roi_desc": [
+        "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**.",
+        "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are likely **blood vessels**.",
+        "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**.",
+        "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are likely blood vessels.",
+        "The prominent, discrete, thick-walled circular structures with clear or collapsed lumens embedded within the looser pale pink stroma are most likely **sebaceous glands**."
+      ]
+    }
+  ]
+}
