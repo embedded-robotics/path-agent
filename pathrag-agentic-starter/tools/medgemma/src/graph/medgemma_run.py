@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from src.graph.runtime import infer_one, load_yaml
+from src.graph.runtime import infer_one, load_yaml, runtime_settings
 
 
 def main() -> None:
@@ -18,9 +18,7 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = load_yaml(args.config)
-    model_id = args.model or cfg["models"]["medgemma_repo"]
-    max_new_tokens = int(cfg.get("generation", {}).get("max_new_tokens", 160))
-    temperature = float(cfg.get("generation", {}).get("temperature", 0.0))
+    settings = runtime_settings(cfg, args.model)
 
     image_dir = Path(args.image_folder).resolve()
     images = sorted(
@@ -29,14 +27,14 @@ def main() -> None:
 
     captions = []
     for img in images:
-        caption = infer_one(model_id, img, args.question, max_new_tokens=max_new_tokens, temperature=temperature)
+        caption = infer_one(settings, img, args.question)
         captions.append(caption.strip())
 
     answer = " ".join(c for c in captions if c).strip()
     payload = {
         "answer": answer,
         "captions": captions,
-        "model": model_id,
+        "model": settings.model_id,
     }
 
     out = Path(args.out).resolve()

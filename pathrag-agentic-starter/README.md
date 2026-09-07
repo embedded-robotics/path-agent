@@ -139,7 +139,22 @@ export MEDGEMMA_TOOL_DIR=/home/sina/projects/path-agent/pathrag-agentic-starter/
 Notes:
 - the MedGemma tool lives under `tools/medgemma`
 - it uses its own `.venv`
-- current default model is `google/medgemma-4b-it`
+- the global Stage 4 default remains `llava-med`; these defaults apply only
+  after selecting `PATHRAG_STAGE4_BACKEND=medgemma`
+- MedGemma defaults are `google/medgemma-1.5-4b-it`, 4-bit NF4 (with double
+  quantization), BF16 compute, 96 output tokens, and microbatch size 1
+- these settings were engineering smoke-tested, not medical-quality validated,
+  on an RTX 4070 SUPER 12 GB GPU: one-patch/two-prompt adapter and
+  two-patch/four-prompt batch tests observed approximately 8.7 GB peak VRAM
+- the model is cache-first and downloads from Hugging Face when absent, subject
+  to gated-model authorization; set `HF_HUB_OFFLINE=1` and
+  `TRANSFORMERS_OFFLINE=1` for strict cached/offline execution
+- 4-bit mode requires `bitsandbytes` in the isolated `tools/medgemma` venv
+- `MEDGEMMA_MODEL`, `MEDGEMMA_PRECISION`, `MEDGEMMA_QUANTIZATION`,
+  `MEDGEMMA_MAX_NEW_TOKENS`, and `MEDGEMMA_SUBPROCESS_TIMEOUT_SECONDS` override
+  the internal defaults
+- `MEDGEMMA_MICROBATCH_SIZE` is currently restricted to `1`; larger batches are
+  reserved for a future measured optimization
 
 #### Remote LLaVA-Med
 

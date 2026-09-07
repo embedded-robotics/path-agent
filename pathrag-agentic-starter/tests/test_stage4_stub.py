@@ -28,6 +28,11 @@ def test_stub_backend_is_accepted(guarded_stub_backend):
     assert tools._get_stage4_backend() == "stub"
 
 
+def test_global_stage4_default_remains_llava_med(monkeypatch):
+    monkeypatch.delenv("PATHRAG_STAGE4_BACKEND", raising=False)
+    assert tools._get_stage4_backend() == "llava-med"
+
+
 def test_stub_roi_is_deterministic_without_an_image(guarded_stub_backend):
     patch = tools.Patch(id="P0", bbox=(0, 0, 10, 10))
 

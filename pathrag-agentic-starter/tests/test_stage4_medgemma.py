@@ -121,3 +121,17 @@ def test_medgemma_success_diagnostics_are_run_scoped(monkeypatch, tmp_path):
     assert (tmp_path / "run" / "subprocess.stdout.log").read_text() == "model warning"
     assert (tmp_path / "run" / "subprocess.stderr.log").read_text() == "processor warning"
     assert "HF_TOKEN" not in (tmp_path / "run" / "subprocess.stdout.log").read_text()
+
+
+def test_medgemma_client_default_subprocess_timeout_is_600(monkeypatch, tmp_path):
+    client = MedGemmaClient()
+    observed = {}
+
+    def successful_run(*_args, **kwargs):
+        observed["timeout"] = kwargs["timeout"]
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.delenv("MEDGEMMA_SUBPROCESS_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setattr("pathrag.vlm.medgemma_client.subprocess.run", successful_run)
+    client._run(str(tmp_path / "requests.jsonl"), ".", str(tmp_path / "answers.jsonl"))
+    assert observed["timeout"] == 600

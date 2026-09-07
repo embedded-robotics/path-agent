@@ -1,16 +1,13 @@
-env:
-  cache_dir: "~/.cache/huggingface"
-
 models:
-  medgemma_repo: "google/medgemma-4b-it"
+  medgemma_repo: "google/medgemma-1.5-4b-it"
 
 generation:
-  max_new_tokens: 160
+  max_new_tokens: 96
   temperature: 0.0
 
 runtime:
   precision: "bf16"
-  quantization: "none"
+  quantization: "4bit"
   microbatch_size: 1
 
 stage4:

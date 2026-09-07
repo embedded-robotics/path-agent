@@ -52,10 +52,10 @@ def runtime_settings(config: dict[str, Any], model_override: str | None = None) 
     models = config.get("models", {})
     generation = config.get("generation", {})
     runtime = config.get("runtime", {})
-    model_id = model_override or _env("MEDGEMMA_MODEL", models.get("medgemma_repo", ""))
+    model_id = model_override or _env("MEDGEMMA_MODEL", models.get("medgemma_repo", "google/medgemma-1.5-4b-it"))
     precision = str(_env("MEDGEMMA_PRECISION", runtime.get("precision", "bf16"))).lower()
-    quantization = str(_env("MEDGEMMA_QUANTIZATION", runtime.get("quantization", "none"))).lower()
-    max_new_tokens = int(_env("MEDGEMMA_MAX_NEW_TOKENS", generation.get("max_new_tokens", 160)))
+    quantization = str(_env("MEDGEMMA_QUANTIZATION", runtime.get("quantization", "4bit"))).lower()
+    max_new_tokens = int(_env("MEDGEMMA_MAX_NEW_TOKENS", generation.get("max_new_tokens", 96)))
     microbatch_size = int(_env("MEDGEMMA_MICROBATCH_SIZE", runtime.get("microbatch_size", 1)))
     temperature = float(_env("MEDGEMMA_TEMPERATURE", generation.get("temperature", 0.0)))
     if not model_id:
@@ -107,7 +107,7 @@ def pipeline_kwargs(settings: RuntimeSettings) -> dict[str, Any]:
 
 
 @lru_cache(maxsize=4)
-def load_pipe(model_id: str, precision: str = "bf16", quantization: str = "none"):
+def load_pipe(model_id: str, precision: str = "bf16", quantization: str = "4bit"):
     settings = RuntimeSettings(model_id, precision, quantization, 1, 1, 0.0)
     return pipeline("image-text-to-text", **pipeline_kwargs(settings))
 
