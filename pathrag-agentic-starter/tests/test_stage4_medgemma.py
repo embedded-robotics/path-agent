@@ -28,6 +28,10 @@ def test_medgemma_graph_batches_requests_and_preserves_patch_order(tmp_path, mon
     def fake_batch(self, requests, request_jsonl, answers_jsonl):
         observed["requests"] = requests
         observed["calls"] = observed.get("calls", 0) + 1
+        self.last_diagnostic_paths = {
+            "subprocess_stdout_log": str(tmp_path / "subprocess.stdout.log"),
+            "subprocess_stderr_log": str(tmp_path / "subprocess.stderr.log"),
+        }
         return list(reversed([
             {"request_id": row["request_id"], "patch_id": row["patch_id"], "task_type": row["task_type"], "text": f"{row['task_type']}:{row['patch_id']}", "model_id": "google/medgemma-1.5-4b-it", "precision": "bf16", "quantization": "4bit"}
             for row in requests
@@ -47,6 +51,7 @@ def test_medgemma_graph_batches_requests_and_preserves_patch_order(tmp_path, mon
     assert result["stage4_provenance"]["model_id"] == "google/medgemma-1.5-4b-it"
     assert result["stage4_provenance"]["precision"] == "bf16"
     assert result["stage4_provenance"]["quantization"] == "4bit"
+    assert result["stage4_provenance"]["subprocess_stdout_log"].endswith("subprocess.stdout.log")
     assert "caption" in observed["requests"][1]["prompt"]
     assert "caption" not in observed["requests"][0]["prompt"]
     second = langgraph_app.n_roi_and_patch_agents({"image_path": "slide.png", "question": "Question", "patches": _patches(), "full_captions": []})
@@ -92,10 +97,27 @@ def test_medgemma_timeout_and_oom_diagnostics_are_specific(monkeypatch, tmp_path
     (tmp_path / "python").write_text("")
     (tmp_path / "config.yaml").write_text("")
     def timeout(*_args, **_kwargs):
-        raise tools.subprocess.TimeoutExpired("medgemma", 1)
+        raise tools.subprocess.TimeoutExpired("medgemma", 1, output="partial output", stderr="timeout detail")
     monkeypatch.setattr("pathrag.vlm.medgemma_client.subprocess.run", timeout)
     with pytest.raises(RuntimeError, match="timed out"):
-        client._run("requests", ".", "answers")
+        client._run(str(tmp_path / "requests"), ".", str(tmp_path / "answers.jsonl"))
+    assert (tmp_path / "subprocess.stdout.log").read_text() == "partial output"
+    assert (tmp_path / "subprocess.stderr.log").read_text() == "timeout detail"
     monkeypatch.setattr("pathrag.vlm.medgemma_client.subprocess.run", lambda *_a, **_k: SimpleNamespace(returncode=1, stdout="", stderr="CUDA out of memory"))
     with pytest.raises(RuntimeError, match="CUDA out of memory"):
-        client._run("requests", ".", "answers")
+        client._run(str(tmp_path / "requests"), ".", str(tmp_path / "answers.jsonl"))
+    assert "out of memory" in (tmp_path / "subprocess.stderr.log").read_text()
+
+
+def test_medgemma_success_diagnostics_are_run_scoped(monkeypatch, tmp_path):
+    client = MedGemmaClient()
+    monkeypatch.setattr("pathrag.vlm.medgemma_client.subprocess.run", lambda *_a, **_k: SimpleNamespace(returncode=0, stdout="model warning", stderr="processor warning"))
+    answers = tmp_path / "run" / "answers.jsonl"
+    client._run(str(tmp_path / "requests.jsonl"), ".", str(answers))
+    assert client.last_diagnostic_paths == {
+        "subprocess_stdout_log": str(tmp_path / "run" / "subprocess.stdout.log"),
+        "subprocess_stderr_log": str(tmp_path / "run" / "subprocess.stderr.log"),
+    }
+    assert (tmp_path / "run" / "subprocess.stdout.log").read_text() == "model warning"
+    assert (tmp_path / "run" / "subprocess.stderr.log").read_text() == "processor warning"
+    assert "HF_TOKEN" not in (tmp_path / "run" / "subprocess.stdout.log").read_text()

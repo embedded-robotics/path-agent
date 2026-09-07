@@ -6,6 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import src.graph.runtime as runtime
 from src.graph.runtime import MedGemmaConfigurationError, pipeline_kwargs, runtime_settings
 
 
@@ -34,6 +35,21 @@ class RuntimeSettingsTests(unittest.TestCase):
             with patch.dict("os.environ", {"MEDGEMMA_MICROBATCH_SIZE": str(value)}):
                 with self.assertRaisesRegex(MedGemmaConfigurationError, "sequential single-item"):
                     runtime_settings({"models": {"medgemma_repo": "model"}})
+
+    def test_pipeline_dtype_preserves_selected_precision(self):
+        settings = runtime_settings({"models": {"medgemma_repo": "model"}, "runtime": {"precision": "fp16"}})
+        def modern_pipeline(*_args, dtype=None, **_kwargs):
+            return None
+        with patch.object(runtime, "pipeline", modern_pipeline):
+            kwargs = pipeline_kwargs(settings)
+        self.assertEqual(kwargs["dtype"], runtime.torch.float16)
+        self.assertNotIn("torch_dtype", kwargs)
+
+    def test_4bit_configuration_is_unchanged(self):
+        settings = runtime_settings({"models": {"medgemma_repo": "model"}, "runtime": {"quantization": "4bit", "precision": "bf16"}})
+        kwargs = pipeline_kwargs(settings)
+        self.assertTrue(kwargs["quantization_config"].load_in_4bit)
+        self.assertEqual(kwargs["quantization_config"].bnb_4bit_quant_type, "nf4")
 
 
 if __name__ == "__main__":

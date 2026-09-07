@@ -592,14 +592,15 @@ def medgemma_stage4_batch(
             requests.append({"request_id": f"{run_id}:{patch.id}:{task_type}", "patch_id": patch.id, "task_type": task_type, "image": str(Path(crop).resolve()), "prompt": prompt})
     request_path, answer_path = run_dir / "requests.jsonl", run_dir / "answers.jsonl"
     _write_jsonl(requests, str(request_path))
-    answers = MedGemmaClient().ask_structured_batch(requests, str(request_path), str(answer_path))
+    client = MedGemmaClient()
+    answers = client.ask_structured_batch(requests, str(request_path), str(answer_path))
     by_id = {answer["request_id"]: answer for answer in answers}
     roi_desc, summaries = [], []
     for patch in patches:
         roi_desc.append(by_id[f"{run_id}:{patch.id}:roi"]["text"])
         summaries.append(by_id[f"{run_id}:{patch.id}:contribution"]["text"])
     provenance = answers[0]
-    summary = {"backend": "medgemma", "model_id": provenance["model_id"], "precision": provenance["precision"], "quantization": provenance["quantization"], "artifact_dir": str(run_dir.resolve()), "patch_count": len(patches), "request_count": len(requests)}
+    summary = {"backend": "medgemma", "model_id": provenance["model_id"], "precision": provenance["precision"], "quantization": provenance["quantization"], "artifact_dir": str(run_dir.resolve()), "patch_count": len(patches), "request_count": len(requests), **client.last_diagnostic_paths}
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return [True] * len(patches), roi_desc, summaries, summary
 

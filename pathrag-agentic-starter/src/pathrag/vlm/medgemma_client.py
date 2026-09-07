@@ -33,6 +33,7 @@ class MedGemmaClient:
         self.config = pathlib.Path(
             os.environ.get("MEDGEMMA_CONFIG", str(self.tool_dir / "config" / "default.yaml"))
         )
+        self.last_diagnostic_paths: dict[str, str] = {}
 
         if not self.tool_dir.exists():
             raise RuntimeError(
@@ -49,6 +50,22 @@ class MedGemmaClient:
                 "MedGemma config does not exist. "
                 f"Expected: {self.config}"
             )
+
+    @staticmethod
+    def _diagnostic_text(value: object | None) -> str:
+        if value is None:
+            return ""
+        return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else str(value)
+
+    def _write_diagnostics(self, answers_file: str, stdout: object | None, stderr: object | None) -> str:
+        artifact_dir = pathlib.Path(answers_file).resolve().parent
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        stdout_path = artifact_dir / "subprocess.stdout.log"
+        stderr_path = artifact_dir / "subprocess.stderr.log"
+        stdout_path.write_text(self._diagnostic_text(stdout), encoding="utf-8")
+        stderr_path.write_text(self._diagnostic_text(stderr), encoding="utf-8")
+        self.last_diagnostic_paths = {"subprocess_stdout_log": str(stdout_path), "subprocess_stderr_log": str(stderr_path)}
+        return f" Diagnostics: stdout={stdout_path}; stderr={stderr_path}."
 
     def _run(self, question_file: str, image_folder: str, answers_file: str) -> None:
         qfile = str(pathlib.Path(question_file).resolve())
@@ -71,15 +88,14 @@ class MedGemmaClient:
                 timeout=int(os.environ.get("MEDGEMMA_SUBPROCESS_TIMEOUT_SECONDS", "600")),
             )
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError("MedGemma subprocess timed out; no fallback backend was used.") from exc
+            paths = self._write_diagnostics(afile, exc.output, exc.stderr)
+            raise RuntimeError("MedGemma subprocess timed out; no fallback backend was used." + paths) from exc
+        paths = self._write_diagnostics(afile, result.stdout, result.stderr)
         if result.returncode != 0:
             if "out of memory" in (result.stderr or "").lower():
-                raise RuntimeError("MedGemma CUDA out of memory; reduce precision, quantize, or lower request size.")
+                raise RuntimeError("MedGemma CUDA out of memory; reduce precision, quantize, or lower request size." + paths)
             raise RuntimeError(
-                "MedGemma command failed.\n"
-                f"CMD: {' '.join(cmd)}\n"
-                f"STDOUT:\n{result.stdout}\n"
-                f"STDERR:\n{result.stderr}"
+                "MedGemma command failed." + paths
             )
 
     @staticmethod

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import os
 from dataclasses import dataclass
 from functools import lru_cache
@@ -76,7 +77,8 @@ def runtime_settings(config: dict[str, Any], model_override: str | None = None) 
 
 def pipeline_kwargs(settings: RuntimeSettings) -> dict[str, Any]:
     """Build load arguments without constructing a pipeline or loading weights."""
-    kwargs: dict[str, Any] = {"model": settings.model_id, "device_map": "auto", "torch_dtype": _precision_dtype(settings.precision)}
+    precision_key = "dtype" if "dtype" in inspect.signature(pipeline).parameters else "torch_dtype"
+    kwargs: dict[str, Any] = {"model": settings.model_id, "device_map": "auto", precision_key: _precision_dtype(settings.precision)}
     cache_dir = os.environ.get("HF_HOME")
     if cache_dir:
         kwargs["cache_dir"] = cache_dir
