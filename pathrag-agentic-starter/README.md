@@ -24,23 +24,56 @@ This repo ships with:
 ## Quickstart
 
 ```bash
-# 1) Create a virtual environment (recommended)
+# 1) Enter the Python project and create a virtual environment (recommended)
+cd pathrag-agentic-starter
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 2) Install dependencies
-pip install -r requirements.txt
+# 2) Install the lightweight LangGraph orchestrator in editable mode
+python -m pip install -e .
 
 # 3) Set your API key (if you plan to call OpenAI for the reasoner)
 cp src/pathrag/workflows/config/.env.example .env
 # then edit .env and add OPENAI_API_KEY=...
 
-# 4) Run either template
+# 4) Run the LangGraph template
 python scripts/run_langgraph.py
+```
 
-### Expected output
-FINAL ANSWER: [mocked] keratinization (example)
-``` :contentReference[oaicite:1]{index=1}
+The editable installation makes the `src/pathrag` package importable without
+setting `PYTHONPATH` or modifying `sys.path`. The default installation includes
+only the dependencies needed by the current LangGraph orchestrator; it does not
+install model runtimes or service stacks.
+
+### Development and optional orchestrator features
+
+Install the lightweight test dependencies with the `dev` extra:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest -q
+```
+
+AutoGen and SVS input support are optional:
+
+```bash
+# AutoGen runner
+python -m pip install -e ".[autogen]"
+
+# SVS input support
+python -m pip install -e ".[svs]"
+```
+
+The `svs` extra installs the Python bindings, but the native OpenSlide library
+must also be installed for the host operating system. Extras can be combined,
+for example: `python -m pip install -e ".[dev,autogen,svs]"`.
+
+### Isolated component environments
+
+MedGemma, LLaVA-Med, CHIEF, and Histocartography retain their own requirements
+files and virtual environments under `tools/`. Install each component inside
+its dedicated environment when that component is needed. Their ML and runtime
+dependencies are intentionally not part of the default orchestrator install.
 
 ## Local-First Runtime
 
@@ -77,7 +110,21 @@ Notes:
 
 ### Stage 4 backends
 
-Stage 4 can now run with either a local MedGemma backend or an LLaVA-Med backend.
+Stage 4 supports the explicit `stub`, `medgemma`, and `llava-med` backends.
+
+#### Deterministic stub
+
+Use the stub for local control-flow, state-contract, and integration debugging:
+
+```bash
+export PATHRAG_STAGE4_BACKEND=stub
+unset PATHRAG_STAGE4_REMOTE_URL
+```
+
+Stub mode does not read the source image, create crops, write Stage 4 JSONL
+artifacts, or invoke a model, subprocess, or remote service. Its deterministic
+output includes the patch ID for alignment debugging and a whitespace-normalized
+question excerpt capped at 120 characters. Stub output has no medical meaning.
 
 #### Local MedGemma
 
@@ -128,7 +175,7 @@ Colab notebook used for the remote LLaVA-Med path:
 - `PATHRAG_USE_RETRIEVER_API`: `1` to use external caption retriever
 - `PATHRAG_RETRIEVER_API_URL`: Retriever API endpoint.
 - `PATHRAG_HTTP_TIMEOUT`: HTTP timeout (seconds)
-- `PATHRAG_STAGE4_BACKEND`: `llava-med` or `medgemma`
+- `PATHRAG_STAGE4_BACKEND`: `stub`, `medgemma`, or `llava-med`
 - `PATHRAG_STAGE4_REMOTE_URL`: remote Stage 4 base URL for LLaVA-Med
 - `PATHRAG_STAGE4_USE_CAPTIONS`: `0` disables Stage 3 captions inside Stage 4 prompts
 - `MEDGEMMA_TOOL_DIR`: path to the local MedGemma tool directory
@@ -252,6 +299,75 @@ for step in app.stream(init_state, config={"configurable": {"thread_id": "demo-1
 
 print(final_step["fuse"]["final_answer"])
 ```
+
+## Local-development runner
+
+`scripts/run_local_dev.py` exercises the current orchestration plumbing from
+saved patches without running Histocartography or CHIEF. It passes non-empty
+precomputed `patches` into the existing graph, so Stages 1–2 take their existing
+skip path. Stage 4 is explicitly set to the deterministic, non-medical `stub`
+backend.
+
+Stage 3 is also placeholder-only in the current implementation:
+
+- `predict_tissue()` hashes the image-path string and does not inspect image
+  contents, even when the path exists.
+- The runner disables the legacy localhost PathGenCLIP Retriever and uses the
+  packaged `src/pathrag/retrieval/banks/tissue_caps.yml` caption bank.
+
+The runner warns about this placeholder behavior on every run and adds a second
+warning when the image path does not exist. Existing Stage 5 critique and Stage
+7 fusion still use OpenAI, so a real manual run requires `OPENAI_API_KEY` in the
+environment or project `.env` file. The runner loads the project `.env` and
+validates that the key is non-blank before importing the production graph.
+
+Canonical patch input can be a JSON array or a `patches` wrapper:
+
+```json
+{
+  "patches": [
+    {"id": "CP0", "bbox": [1344, 448, 1568, 672], "score": 3.0},
+    {"id": "CP1", "bbox": [672, 224, 896, 448], "score": 2.0}
+  ]
+}
+```
+
+Current `{"fuse": {"patches": [...]}}` graph results and an extracted
+`{"chief_patch_coords": [{"x1": ..., "y1": ..., "x2": ..., "y2": ...}]}`
+object are also supported. A complete multi-question evaluation sheet is not a
+valid input; extract the desired question's `chief_patch_coords` first.
+
+```bash
+export OPENAI_API_KEY=...
+
+python scripts/run_local_dev.py \
+  --patches-json /path/to/saved_patches.json \
+  --image-path /path/to/image.png \
+  --question "What are the main pathological findings?" \
+  --top-k 3 \
+  --max-rounds 1 \
+  --out artifacts/local-dev/result.json
+```
+
+Input order is preserved and only the first `top_k` patches are used. If fewer
+patches are available, the runner reports the clamp and keeps all of them. The
+output JSON records run metadata, the selected patches, Stage 3 context, Stage
+4 aligned outputs, chosen indices, and the final answer. A short version of the
+same information is printed to the console.
+
+The output's `run` metadata distinguishes the requested and selected patch
+counts:
+
+- `requested_top_k` is the value supplied through `--top-k`.
+- `effective_top_k` is the number of patches selected after clamping.
+- `top_k` remains a compatibility alias for `effective_top_k`.
+
+The graph state also receives the effective value, so downstream stages never
+request more patches than the validated input contains.
+
+This runner is for control-flow, state-contract, and integration debugging. Its
+placeholder Stage 3 and stub Stage 4 outputs are not suitable for medical-quality
+evaluation.
 
 ## Evaluation runner
 

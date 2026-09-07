@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pathrag-agentic-starter"
+version = "0.1.0"
+description = "Agentic orchestration starter for Path-RAG"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "langgraph==0.2.*",
+    "openai>=1.40.0",
+    "python-dotenv>=1.0.1",
+    "Pillow>=10.4.0",
+    "PyYAML>=6.0.1",
+    "numpy",
+]
+
+[project.optional-dependencies]
+autogen = [
+    "pyautogen>=0.2.34",
+]
+dev = [
+    "pytest",
+]
+svs = [
+    "openslide-python",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pathrag = ["retrieval/banks/*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -45,6 +45,8 @@ GRID_SIZE = 3
 DEFAULT_TOP_K = 3
 FLAT_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 SVS_EXTENSIONS = {".svs"}
+STAGE4_BACKENDS = ("stub", "medgemma", "llava-med")
+STUB_QUESTION_MAX_CHARS = 120
 
 OUTPUT_ROOT = Path(os.getenv("OUTPUT_ROOT", "src/pathrag/pipeline/files"))
 (OUTPUT_ROOT / "query").mkdir(parents=True, exist_ok=True)
@@ -101,19 +103,32 @@ def _call_stage4_remote(endpoint: str, crop_path: str, prompt: str, extra: dict 
 
 
 def _get_stage4_backend() -> str:
-    return os.environ.get("PATHRAG_STAGE4_BACKEND", "llava-med").strip().lower()
+    backend = os.environ.get("PATHRAG_STAGE4_BACKEND", "llava-med").strip().lower()
+    if backend not in STAGE4_BACKENDS:
+        raise RuntimeError(
+            "Unsupported PATHRAG_STAGE4_BACKEND. "
+            "Supported values: stub, medgemma, llava-med."
+        )
+    return backend
+
+
+def _stub_question_text(question: str) -> str:
+    """Normalize and cap stub question text at STUB_QUESTION_MAX_CHARS."""
+    normalized = " ".join(str(question).split())
+    if len(normalized) <= STUB_QUESTION_MAX_CHARS:
+        return normalized
+    return normalized[: STUB_QUESTION_MAX_CHARS - 3].rstrip() + "..."
 
 
 def _get_stage4_client():
     backend = _get_stage4_backend()
+    if backend == "stub":
+        raise RuntimeError("The Stage 4 stub backend does not use a model client.")
     if backend == "medgemma":
         return MedGemmaClient()
     if backend == "llava-med":
         return LlavaMedClient()
-    raise RuntimeError(
-        "Unsupported PATHRAG_STAGE4_BACKEND. "
-        "Expected 'llava-med' or 'medgemma'."
-    )
+    raise AssertionError(f"Unhandled Stage 4 backend: {backend}")
 
 import subprocess
 from pathlib import Path
@@ -424,6 +439,16 @@ def roi_agent_describe(patch, question: str, image_path: str | None = None):
       - PATHRAG_IMAGE: path to the full image (or defaults to sample_he.png)
       - LLMED_REPO, LLMED_MODEL: see LlavaMedClient
     """
+    backend = _get_stage4_backend()
+    if backend == "stub":
+        return {
+            "useful": True,
+            "description": (
+                f"[stub-roi:{patch.id}] "
+                "Deterministic ROI description for pipeline testing."
+            ),
+        }
+
     img_path = image_path or os.environ.get("PATHRAG_IMAGE", "sample_he.png")
     crop_paths = save_crops(img_path, [patch.bbox], "artifacts/crops")
 
@@ -444,7 +469,7 @@ def roi_agent_describe(patch, question: str, image_path: str | None = None):
     crop_path = crop_paths[0]
 
     try:
-        if _get_stage4_backend() == "llava-med" and os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
+        if backend == "llava-med" and os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
             text = _call_stage4_remote("describe_roi", crop_path, prompt)
             return {"useful": True, "description": text}
         client = _get_stage4_client()
@@ -464,6 +489,14 @@ def patch_agent_contribution(
     REAL VLM call (LLaVA-Med): explain contribution of this ROI to the answer.
     Returns a short sentence, used in Stage 5/7 fusion.
     """
+    backend = _get_stage4_backend()
+    if backend == "stub":
+        question_text = _stub_question_text(question)
+        return (
+            f"[stub-patch:{patch.id}] "
+            f"Deterministic contribution for question: {question_text}"
+        )
+
     img_path = image_path or os.environ.get("PATHRAG_IMAGE", "sample_he.png")
     crop_paths = save_crops(img_path, [patch.bbox], "artifacts/crops")
 
@@ -505,7 +538,7 @@ def patch_agent_contribution(
     crop_path = crop_paths[0]
 
     try:
-        if _get_stage4_backend() == "llava-med" and os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
+        if backend == "llava-med" and os.environ.get("PATHRAG_STAGE4_REMOTE_URL"):
             try:
                 return _call_stage4_remote(
                     "patch_contribution",

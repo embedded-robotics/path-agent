@@ -1,6 +1,3 @@
-import sys, os
-sys.path.append("src"); os.environ["PYTHONPATH"]="src"
-
 from pathrag.retrieval.store import load_bank, captions_for_label
 from pathrag.site_labeler import CANON_LABELS
 
