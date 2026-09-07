@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 
 
 SUPPORTED_MODES = ("answer", "description")
+LOCAL_DEV_STAGE4_BACKENDS = ("stub", "medgemma")
 _MISSING = object()
 
 
@@ -189,7 +190,7 @@ def validate_run_options(
     return image_text, question_text
 
 
-def _emit_stage3_warnings(image_path: str) -> None:
+def _emit_stage3_warnings(image_path: str, stage4_backend: str = "stub") -> None:
     warnings.warn(
         "Local-dev Stage 3 is placeholder-only: predict_tissue() hashes the image-path "
         "string without inspecting image contents, and captions come from the packaged "
@@ -200,16 +201,16 @@ def _emit_stage3_warnings(image_path: str) -> None:
     if not Path(image_path).exists():
         warnings.warn(
             f"Image path does not exist; continuing with the logical path for placeholder "
-            f"Stage 3 and stub Stage 4: {image_path}",
+            f"Stage 3 and {stage4_backend} Stage 4: {image_path}",
             UserWarning,
             stacklevel=2,
         )
 
 
 @contextmanager
-def _local_dev_environment() -> Iterator[None]:
+def _local_dev_environment(stage4_backend: str) -> Iterator[None]:
     overrides: dict[str, str | None] = {
-        "PATHRAG_STAGE4_BACKEND": "stub",
+        "PATHRAG_STAGE4_BACKEND": stage4_backend,
         "PATHRAG_STAGE4_REMOTE_URL": None,
         "PATHRAG_USE_RETRIEVER_API": "0",
     }
@@ -263,11 +264,12 @@ def _build_result(
     requested_top_k: int,
     max_rounds: int,
     mode: str,
+    stage4_backend: str,
     thread_id: str,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "run": {
-            "backend": "stub",
+            "backend": stage4_backend,
             "thread_id": thread_id,
             "input_paths": {
                 "patches_json": str(patches_json),
@@ -304,6 +306,7 @@ def run_local_dev(
     top_k: int = 3,
     max_rounds: int = 1,
     mode: str = "answer",
+    stage4_backend: str = "stub",
     out: str | Path = "artifacts/local-dev/result.json",
     thread_id: str | None = None,
     graph_factory: Callable[[], Any] | None = None,
@@ -318,8 +321,12 @@ def run_local_dev(
     image_text, question_text = validate_run_options(
         image_path, question, mode, max_rounds
     )
+    if stage4_backend not in LOCAL_DEV_STAGE4_BACKENDS:
+        raise LocalDevError(
+            "stage4_backend must be one of: " + ", ".join(LOCAL_DEV_STAGE4_BACKENDS)
+        )
     resolved_thread_id = _thread_id(thread_id)
-    _emit_stage3_warnings(image_text)
+    _emit_stage3_warnings(image_text, stage4_backend)
     if clamp_message:
         warnings.warn(clamp_message, UserWarning, stacklevel=2)
     load_dotenv()
@@ -334,7 +341,7 @@ def run_local_dev(
         "round_ix": 0,
         "patches": selected,
     }
-    with _local_dev_environment():
+    with _local_dev_environment(stage4_backend):
         graph = graph_factory() if graph_factory is not None else _load_production_graph()
         final_state = graph.invoke(
             initial_state,
@@ -353,6 +360,7 @@ def run_local_dev(
         requested_top_k=top_k,
         max_rounds=max_rounds,
         mode=mode,
+        stage4_backend=stage4_backend,
         thread_id=resolved_thread_id,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -371,7 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run PathRAG from precomputed patches with placeholder Stage 3, "
-            "stub Stage 4, and existing OpenAI-backed Stages 5 and 7."
+            "a selected local Stage 4 backend, and existing OpenAI-backed Stages 5 and 7."
         )
     )
     parser.add_argument("--patches-json", required=True, help="Saved patch JSON input")
@@ -380,6 +388,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-k", type=int, default=3, help="Maximum patches to retain")
     parser.add_argument("--max-rounds", type=int, default=1, help="Critique rounds (minimum 1)")
     parser.add_argument("--mode", choices=SUPPORTED_MODES, default="answer")
+    parser.add_argument(
+        "--stage4-backend",
+        choices=LOCAL_DEV_STAGE4_BACKENDS,
+        default="stub",
+        help="Stage 4 backend for this runner (default: stub)",
+    )
     parser.add_argument("--thread-id", help="Optional LangGraph thread ID")
     parser.add_argument("--out", default="artifacts/local-dev/result.json")
     return parser
@@ -396,6 +410,7 @@ def main() -> None:
             top_k=args.top_k,
             max_rounds=args.max_rounds,
             mode=args.mode,
+            stage4_backend=args.stage4_backend,
             out=args.out,
             thread_id=args.thread_id,
         )

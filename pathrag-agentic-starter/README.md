@@ -320,8 +320,7 @@ print(final_step["fuse"]["final_answer"])
 `scripts/run_local_dev.py` exercises the current orchestration plumbing from
 saved patches without running Histocartography or CHIEF. It passes non-empty
 precomputed `patches` into the existing graph, so Stages 1–2 take their existing
-skip path. Stage 4 is explicitly set to the deterministic, non-medical `stub`
-backend.
+skip path. Stage 4 defaults to the deterministic, non-medical `stub` backend.
 
 Stage 3 is also placeholder-only in the current implementation:
 
@@ -363,6 +362,27 @@ python scripts/run_local_dev.py \
   --max-rounds 1 \
   --out artifacts/local-dev/result.json
 ```
+
+To run the same precomputed-patch graph path with real local MedGemma Stage 4,
+select it explicitly. MedGemma must already be installed in its isolated tool
+environment and the gated model must be cached or authorized. For strict
+cache-only execution, add `HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1` before the
+command:
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
+python scripts/run_local_dev.py \
+  --patches-json /path/to/saved_patches.json \
+  --image-path /path/to/image.png \
+  --question "What are the main pathological findings?" \
+  --top-k 3 \
+  --max-rounds 1 \
+  --stage4-backend medgemma \
+  --out artifacts/local-dev/result.json
+```
+
+This option affects only this runner invocation; it does not change the global
+Stage 4 default, which remains `llava-med` outside the local runner.
 
 Input order is preserved and only the first `top_k` patches are used. If fewer
 patches are available, the runner reports the clamp and keeps all of them. The

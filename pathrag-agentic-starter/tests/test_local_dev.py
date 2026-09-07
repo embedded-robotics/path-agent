@@ -407,5 +407,93 @@ def test_offline_runner_integration_skips_heavy_stages_and_restores_environment(
     assert "offline fake final answer" in console
 
 
+def test_stage4_backend_parser_defaults_to_stub_and_accepts_medgemma():
+    parser = local_dev.build_parser()
+    required = ["--patches-json", "patches.json", "--image-path", "image.png", "--question", "Question"]
+
+    assert parser.parse_args(required).stage4_backend == "stub"
+    assert parser.parse_args([*required, "--stage4-backend", "stub"]).stage4_backend == "stub"
+    assert parser.parse_args([*required, "--stage4-backend", "medgemma"]).stage4_backend == "medgemma"
+    with pytest.raises(SystemExit):
+        parser.parse_args([*required, "--stage4-backend", "llava-med"])
+
+
+def test_medgemma_mode_reaches_graph_and_preserves_medgemma_environment(tmp_path, monkeypatch):
+    source = tmp_path / "patches.json"
+    source.write_text(json.dumps(canonical_patches()), encoding="utf-8")
+    expected = {
+        "MEDGEMMA_MODEL": "authorized-model",
+        "MEDGEMMA_PRECISION": "fp16",
+        "MEDGEMMA_QUANTIZATION": "8bit",
+        "MEDGEMMA_MAX_NEW_TOKENS": "123",
+        "MEDGEMMA_SUBPROCESS_TIMEOUT_SECONDS": "456",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "HF_HOME": "/cache-root",
+        "CUDA_VISIBLE_DEVICES": "0",
+    }
+    for name, value in expected.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-only-key")
+    monkeypatch.setenv("PATHRAG_STAGE4_REMOTE_URL", "http://llava.example")
+    monkeypatch.setenv("PATHRAG_USE_RETRIEVER_API", "1")
+    monkeypatch.setattr(local_dev, "load_dotenv", lambda: None)
+    observed = {}
+
+    class FakeGraph:
+        def invoke(self, state, config):
+            observed["backend"] = os.environ.get("PATHRAG_STAGE4_BACKEND")
+            observed["remote"] = os.environ.get("PATHRAG_STAGE4_REMOTE_URL")
+            observed["retriever"] = os.environ.get("PATHRAG_USE_RETRIEVER_API")
+            observed["medgemma"] = {name: os.environ.get(name) for name in expected}
+            return {**state, "roi_useful": [True, True], "roi_desc": ["roi-0", "roi-1"], "patch_summaries": ["patch-0", "patch-1"], "chosen_idx": [0], "final_answer": "answer"}
+
+    with pytest.warns(UserWarning):
+        result = local_dev.run_local_dev(
+            patches_json=source,
+            image_path="missing.png",
+            question="Question",
+            stage4_backend="medgemma",
+            out=tmp_path / "result.json",
+            graph_factory=FakeGraph,
+        )
+
+    assert observed == {"backend": "medgemma", "remote": None, "retriever": "0", "medgemma": expected}
+    assert result["run"]["backend"] == "medgemma"
+    assert os.environ["PATHRAG_STAGE4_REMOTE_URL"] == "http://llava.example"
+    assert os.environ["PATHRAG_USE_RETRIEVER_API"] == "1"
+    assert {name: os.environ[name] for name in expected} == expected
+
+
+def test_medgemma_environment_is_restored_when_graph_raises(tmp_path, monkeypatch):
+    source = tmp_path / "patches.json"
+    source.write_text(json.dumps(canonical_patches()), encoding="utf-8")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-only-key")
+    monkeypatch.setenv("PATHRAG_STAGE4_BACKEND", "llava-med")
+    monkeypatch.setenv("PATHRAG_STAGE4_REMOTE_URL", "http://llava.example")
+    monkeypatch.setenv("PATHRAG_USE_RETRIEVER_API", "1")
+    monkeypatch.setattr(local_dev, "load_dotenv", lambda: None)
+
+    class FailingGraph:
+        def invoke(self, *_args, **_kwargs):
+            assert os.environ["PATHRAG_STAGE4_BACKEND"] == "medgemma"
+            raise RuntimeError("graph failure")
+
+    with pytest.warns(UserWarning):
+        with pytest.raises(RuntimeError, match="graph failure"):
+            local_dev.run_local_dev(
+                patches_json=source,
+                image_path="missing.png",
+                question="Question",
+                stage4_backend="medgemma",
+                out=tmp_path / "result.json",
+                graph_factory=FailingGraph,
+            )
+
+    assert os.environ["PATHRAG_STAGE4_BACKEND"] == "llava-med"
+    assert os.environ["PATHRAG_STAGE4_REMOTE_URL"] == "http://llava.example"
+    assert os.environ["PATHRAG_USE_RETRIEVER_API"] == "1"
+
+
 def test_generated_thread_id_has_stable_prefix():
     assert local_dev._thread_id(None).startswith("local-dev-")
