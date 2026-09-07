@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Iterable, Tuple
 import base64
 import os, json
+import uuid
 import urllib.request
 import urllib.error
 from dataclasses import dataclass
@@ -561,6 +562,46 @@ def patch_agent_contribution(
         return texts[0] if texts else f"[patch-fallback] {patch.id} via {cap}"
     except Exception as e:
         return f"[patch-error] {e}"
+
+
+def medgemma_stage4_batch(
+    patches: list[Patch], question: str, full_captions: list[str], image_path: str
+) -> tuple[list[bool], list[str], list[str], dict[str, Any]]:
+    """Run all MedGemma Stage 4 prompts once, with request-ID-based alignment."""
+    run_id = uuid.uuid4().hex
+    run_dir = Path("artifacts/stage4/medgemma") / run_id
+    crops = save_crops(image_path, [patch.bbox for patch in patches], str(run_dir / "crops"))
+    use_captions = os.getenv("PATHRAG_STAGE4_USE_CAPTIONS", "1").strip().lower() not in {"0", "false", "no", "off"}
+    caption = (full_captions[0] if use_captions and full_captions else "").strip()[:240]
+    requests: list[dict[str, str]] = []
+    for patch, crop in zip(patches, crops, strict=True):
+        roi_prompt = (
+            f"Question: {question}\nDescribe the dominant visible structure in this crop using only morphology. "
+            "State whether it looks more like a blood vessel, a duct or gland, or another structure, and justify that with visible features such as wall thickness, lumen, lining, shape, and surrounding stroma. "
+            "A thick wall favors blood vessel over cystic space. Do not call it cystic unless the wall is thin and the morphology clearly supports that interpretation. "
+            "Do not give a disease diagnosis.\nReturn exactly 1 short sentence."
+        )
+        contribution_prompt = (
+            f"Question: {question}\nDecide whether the dominant structure in this crop is more consistent with a blood vessel, a duct or gland, or is uncertain, using only visible morphology. "
+            "Use evidence such as wall thickness, lumen, lining, shape, and surrounding stroma. Do not name a disease diagnosis."
+        )
+        if caption:
+            contribution_prompt += f"\nIgnore the context if it is not visibly supported.\nContext: {caption}"
+        contribution_prompt += "\nReturn exactly 1 short sentence that starts with one of these labels: Direct evidence:, Partial evidence:, or No useful evidence:. If relevant, explicitly say whether the morphology favors blood vessel, duct or gland, or remains uncertain."
+        for task_type, prompt in (("roi", roi_prompt), ("contribution", contribution_prompt)):
+            requests.append({"request_id": f"{run_id}:{patch.id}:{task_type}", "patch_id": patch.id, "task_type": task_type, "image": str(Path(crop).resolve()), "prompt": prompt})
+    request_path, answer_path = run_dir / "requests.jsonl", run_dir / "answers.jsonl"
+    _write_jsonl(requests, str(request_path))
+    answers = MedGemmaClient().ask_structured_batch(requests, str(request_path), str(answer_path))
+    by_id = {answer["request_id"]: answer for answer in answers}
+    roi_desc, summaries = [], []
+    for patch in patches:
+        roi_desc.append(by_id[f"{run_id}:{patch.id}:roi"]["text"])
+        summaries.append(by_id[f"{run_id}:{patch.id}:contribution"]["text"])
+    provenance = answers[0]
+    summary = {"backend": "medgemma", "model_id": provenance["model_id"], "precision": provenance["precision"], "quantization": provenance["quantization"], "artifact_dir": str(run_dir.resolve()), "patch_count": len(patches), "request_count": len(requests)}
+    (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    return [True] * len(patches), roi_desc, summaries, summary
 
 
 @dataclass

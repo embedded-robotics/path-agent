@@ -8,6 +8,11 @@ generation:
   max_new_tokens: 160
   temperature: 0.0
 
+runtime:
+  precision: "bf16"
+  quantization: "none"
+  microbatch_size: 1
+
 stage4:
   output_dir: "artifacts"
   smoke_answers_path: "artifacts/answer/smoke.jsonl"

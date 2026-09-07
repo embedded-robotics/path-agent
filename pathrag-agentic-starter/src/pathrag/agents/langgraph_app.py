@@ -40,6 +40,7 @@ from pathrag.agents.tools import (
     identify_subpathology, retrieve_subpath_captions,
     # Stage 4
     roi_agent_describe, patch_agent_contribution,
+    medgemma_stage4_batch,
     # Stage 5
     critique_round,
     # Stage 6
@@ -104,6 +105,7 @@ class PathRAGState(TypedDict):
     roi_useful: List[bool]
     roi_desc: List[str]
     patch_summaries: List[str]
+    stage4_provenance: Dict[str, Any]
 
     # --- Stage 5 artifacts
     critiqued_patches: List[CritiquedPatch] = field(default_factory=list)
@@ -189,6 +191,13 @@ def n_roi_and_patch_agents(state: PathRAGState) -> PathRAGState:
     """
     logger.info("Stage 4 start")
     patches = [Patch(**p) for p in state["patches"]]
+    if __import__("os").environ.get("PATHRAG_STAGE4_BACKEND", "llava-med").strip().lower() == "medgemma":
+        roi_useful, roi_desc, patch_summ, provenance = medgemma_stage4_batch(
+            patches, state["question"], state["full_captions"], state["image_path"]
+        )
+        state["roi_useful"], state["roi_desc"], state["patch_summaries"] = roi_useful, roi_desc, patch_summ
+        state["stage4_provenance"] = provenance
+        return state
     roi_useful, roi_desc, patch_summ = [], [], []
 
     for p in patches:

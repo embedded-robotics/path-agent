@@ -4,57 +4,49 @@ import argparse
 import json
 from pathlib import Path
 
-from src.graph.runtime import infer_one, load_yaml
+from src.graph.runtime import infer_one, load_yaml, runtime_settings
 
 
-def resolve_image_path(image_root: Path, raw_image: str) -> Path:
-    p = Path(raw_image)
-    return p if p.is_absolute() else (image_root / raw_image)
+def _requests(path: Path) -> list[dict]:
+    rows, seen = [], set()
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid request JSONL at line {line_number}") from exc
+        for field in ("request_id", "patch_id", "task_type", "image", "prompt"):
+            if not isinstance(row.get(field), str) or not row[field].strip():
+                raise ValueError(f"Request line {line_number} requires non-empty {field}")
+        if row["task_type"] not in {"roi", "contribution"} or row["request_id"] in seen:
+            raise ValueError(f"Invalid or duplicate request_id at line {line_number}")
+        seen.add(row["request_id"])
+        rows.append(row)
+    if not rows:
+        raise ValueError("Request JSONL contains no requests")
+    return rows
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="config/default.yaml")
-    ap.add_argument("--model", default=None)
-    ap.add_argument("--question-file", required=True)
-    ap.add_argument("--image-folder", required=True)
-    ap.add_argument("--answers-file", required=True)
-    args = ap.parse_args()
-
-    cfg = load_yaml(args.config)
-    model_id = args.model or cfg["models"]["medgemma_repo"]
-    max_new_tokens = int(cfg.get("generation", {}).get("max_new_tokens", 160))
-    temperature = float(cfg.get("generation", {}).get("temperature", 0.0))
-
-    qfile = Path(args.question_file).resolve()
-    image_root = Path(args.image_folder).resolve()
-    afile = Path(args.answers_file).resolve()
-    afile.parent.mkdir(parents=True, exist_ok=True)
-
-    rows = []
-    with qfile.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-
-    outputs = []
-    for row in rows:
-        prompt = row.get("text") or row.get("prompt") or row.get("question") or ""
-        image_path = resolve_image_path(image_root, str(row["image"]))
-        text = infer_one(model_id, image_path, prompt, max_new_tokens=max_new_tokens, temperature=temperature)
-        outputs.append(
-            {
-                "question_id": row.get("question_id"),
-                "image": str(row.get("image", "")),
-                "text": text.strip(),
-                "model_id": model_id,
-            }
-        )
-
-    with afile.open("w", encoding="utf-8") as f:
-        for row in outputs:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="config/default.yaml")
+    parser.add_argument("--model")
+    parser.add_argument("--question-file", required=True)
+    parser.add_argument("--image-folder", required=True)
+    parser.add_argument("--answers-file", required=True)
+    args = parser.parse_args()
+    settings = runtime_settings(load_yaml(args.config), args.model)
+    root, answers_path = Path(args.image_folder).resolve(), Path(args.answers_file).resolve()
+    answers_path.parent.mkdir(parents=True, exist_ok=True)
+    answers = []
+    for request in _requests(Path(args.question_file).resolve()):
+        image = Path(request["image"])
+        text = infer_one(settings, image if image.is_absolute() else root / image, request["prompt"])
+        answers.append({"request_id": request["request_id"], "patch_id": request["patch_id"], "task_type": request["task_type"], "text": text.strip(), "model_id": settings.model_id, "precision": settings.precision, "quantization": settings.quantization})
+    with answers_path.open("w", encoding="utf-8") as handle:
+        for answer in answers:
+            handle.write(json.dumps(answer, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":

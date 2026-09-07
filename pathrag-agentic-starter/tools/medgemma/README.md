@@ -21,9 +21,13 @@ pip install -r requirements.txt
 Optional environment variables:
 
 ```bash
-export MEDGEMMA_MODEL="google/med-gemma-2b-it"
+export MEDGEMMA_MODEL="google/medgemma-1.5-4b-it"  # next authorized smoke-test override
 export HF_HOME="$HOME/.cache/huggingface"
 ```
+
+`MEDGEMMA_MICROBATCH_SIZE` currently accepts only `1`: the tool intentionally
+uses sequential single-item inference for 12 GB VRAM safety. Larger
+microbatches are reserved for a future measured optimization.
 
 ## Batch CLI
 
